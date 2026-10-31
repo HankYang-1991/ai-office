@@ -1,0 +1,127 @@
+:root{
+  --bg:#0f1220; --panel:#161a2b; --panel2:#1c2136; --line:#2b3254; --text:#e8ecf5; --muted:#8d96b3;
+  --gold:#ffd65a; --green:#4cd964; --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 var(--font);-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+h2{font-size:14px;margin:0;letter-spacing:.05em}
+.muted{color:var(--muted);font-size:12px}
+
+/* 工具列 */
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;background:#0b0e19;border-bottom:2px solid var(--line);position:sticky;top:0;z-index:20}
+.brand{font-weight:700;white-space:nowrap}
+.brand .ver{font-family:var(--mono);color:var(--gold);font-size:12px}
+.brand .count{font-family:var(--mono);color:var(--muted);font-size:12px;margin-left:6px}
+.tools{display:flex;gap:6px;flex-wrap:wrap}
+.tools button{background:var(--panel2);border:2px solid var(--line);padding:4px 10px;border-radius:4px;font-size:13px;box-shadow:0 2px 0 #070912}
+.tools button:hover{border-color:#4a5487}
+.tools button:active{transform:translateY(2px);box-shadow:none}
+.tools button.off{opacity:.5}
+.datasrc{margin-left:auto;font-size:12px;color:var(--muted)}
+.narrow-only{display:none}
+
+/* 版面 */
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px;padding:12px;max-width:1600px;margin:0 auto}
+.stage{display:flex;flex-direction:column;gap:12px;min-width:0}
+.map-wrap{position:relative;background:#05060c;border:2px solid var(--line);border-radius:6px;overflow:hidden}
+#office{display:block;width:min(100%, calc((100vh - 130px) * 1.5));margin:0 auto;aspect-ratio:42/28;image-rendering:pixelated;touch-action:manipulation}
+.panel{background:var(--panel);border:2px solid var(--line);border-radius:6px;padding:10px}
+.panel-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.badge{font-size:11px;padding:1px 7px;border-radius:3px;font-weight:700}
+.badge.demo,.tag-demo{background:#5b3b00;color:#ffcf66;border:1px solid #a87400}
+.tag-demo{font-size:10px;padding:0 4px;border-radius:3px;margin-left:4px;font-weight:600}
+
+/* 卡片 */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.card{display:flex;gap:8px;text-align:left;background:var(--panel2);border:2px solid var(--line);border-left:5px solid var(--c);border-radius:5px;padding:8px;min-height:44px}
+.card:hover{border-color:#4a5487;border-left-color:var(--c)}
+.card.sel{border-color:var(--gold);border-left-color:var(--gold);box-shadow:0 0 0 2px rgba(255,214,90,.25)}
+.card .av{width:32px;height:40px;image-rendering:pixelated;flex:none}
+.card-main{flex:1;min-width:0}
+.card-top{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.card-top b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);white-space:nowrap}
+.status i,.pv-status i{display:inline-block;width:8px;height:8px;background:#888}
+.status em{font-style:normal}
+.role{font-size:11px;color:var(--muted);margin-bottom:4px}
+.u-row{margin-top:4px}
+.u-label{display:flex;align-items:center;font-size:11px;color:#c9d0e6}
+.u-pct{margin-left:auto;font-family:var(--mono)}
+.bar{height:7px;background:#0b0e19;border:1px solid #2f3760;margin:2px 0}
+.bar i{display:block;height:100%}
+.u-meta{font-size:10.5px;color:var(--muted);font-family:var(--mono)}
+.u-empty{font-size:11px;color:var(--muted)}
+
+/* 側欄 */
+.sidebar{display:flex;flex-direction:column;gap:12px;min-width:0;max-height:calc(100vh - 80px);position:sticky;top:60px}
+.agent-list ul{list-style:none;margin:0;padding:0;max-height:260px;overflow:auto}
+.al-item{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:4px;cursor:pointer;min-height:40px}
+.al-item:hover{background:var(--panel2)}
+.al-item.sel{background:#3a3210;outline:1px solid var(--gold)}
+.al-item img{width:22px;height:28px;image-rendering:pixelated}
+.al-item div{flex:1;min-width:0}
+.al-item b{display:block;font-size:13px}
+.al-item small{display:block;color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.al-item .dot{width:9px;height:9px;flex:none}
+.al-group{width:22px;height:22px;background:#c78a00;color:#fff;font-size:12px;display:grid;place-items:center;border-radius:4px;font-weight:700}
+.chat{display:flex;flex-direction:column;flex:1;min-height:320px}
+.chat-log{flex:1;overflow:auto;display:flex;flex-direction:column;gap:6px;padding-right:4px;min-height:200px}
+.msg .who{font-size:11px;color:var(--muted);margin-bottom:2px}
+.msg .bubble{background:var(--panel2);border:1px solid var(--line);padding:5px 8px;border-radius:4px;font-size:12.5px;word-break:break-word}
+.msg.user{align-self:flex-end;max-width:85%}
+.msg.user .bubble{background:#23345e;border-color:#3b5394}
+.msg.user .who{text-align:right}
+.msg.agent{display:flex;gap:6px;align-items:flex-start;max-width:95%}
+.msg.agent img{width:20px;height:25px;image-rendering:pixelated;flex:none;margin-top:14px}
+.msg.agent .bubble{border-left:3px solid var(--c)}
+.msg.system{font-size:12px;color:var(--muted)}
+.round{border-top:1px dashed var(--line);padding-top:6px;margin-top:4px;color:#c9d0e6;font-weight:600}
+.done{background:#12301c;border:1px solid #2c6b3f;color:#9ef0b4;padding:6px 8px;border-radius:4px;font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.chips span{font-size:10.5px;font-weight:500;border:1px solid #2c6b3f;padding:0 5px;border-radius:3px;color:#c8f5d4}
+.note{background:#2a2410;border:1px solid #6b5a1c;color:#ffe08a;padding:6px 8px;border-radius:4px}
+.typing{font-style:italic}
+.chat-form{display:flex;gap:6px;margin-top:8px}
+.chat-form input{flex:1;min-width:0;background:#0b0e19;border:2px solid var(--line);color:var(--text);padding:8px;border-radius:4px;font:inherit;font-size:16px}
+.chat-form input:focus{outline:none;border-color:#4a5487}
+.chat-form button{background:#2e5bd6;border:none;border-radius:4px;padding:0 16px;font-weight:700;min-height:40px}
+
+/* Popover */
+.popover{position:absolute;z-index:10;width:290px;max-width:calc(100% - 12px);background:#141829f2;border:2px solid var(--gold);border-radius:6px;padding:10px;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+.pv-head{display:flex;gap:10px;align-items:center}
+.pv-head img{width:40px;height:50px;image-rendering:pixelated;background:#0b0e19;border:2px solid var(--c);border-radius:4px}
+.pv-head b{font-size:15px}
+.pv-role{font-size:12px;color:#c9d0e6}
+.pv-zone{font-size:11px;color:var(--muted)}
+.pv-close{margin-left:auto;align-self:flex-start;background:none;border:none;font-size:18px;width:36px;height:36px;color:var(--muted)}
+.pv-status{margin:8px 0 4px;font-size:12px;display:flex;align-items:center;gap:6px}
+.pv-intro{margin:4px 0 8px;font-size:12px;color:#c9d0e6}
+.pv-sec{font-size:12px;font-weight:700;border-top:1px solid var(--line);padding-top:6px}
+.pv-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.pv-actions button{background:var(--panel2);border:2px solid var(--line);border-radius:4px;padding:6px;font-size:12px;min-height:36px}
+.pv-actions button:hover{border-color:var(--gold)}
+
+footer{text-align:center;color:var(--muted);font-size:11px;padding:8px 12px 20px}
+
+/* 手機/窄螢幕：地圖 → 卡片 → 側欄 堆疊 */
+@media (max-width:860px){
+  .layout{grid-template-columns:1fr;padding:8px;gap:8px}
+  .sidebar{position:static;max-height:none}
+  .narrow-only{display:inline-block}
+  .toolbar{position:static;padding:8px}
+  .tools{width:100%;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+  .tools button{flex:none;min-height:40px;padding:6px 12px}
+  .datasrc{margin-left:0;width:100%}
+  .map-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  #office{width:100%}
+  .map-wrap.zoomed #office{width:200%;max-width:none}
+  .cards{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+  .chat{min-height:0}
+  .chat-log{max-height:55vh}
+  .agent-list ul{max-height:none;display:grid;grid-template-columns:1fr 1fr;gap:2px}
+  .al-item.group{grid-column:1/-1}
+  .popover{position:fixed;left:8px!important;right:8px;bottom:8px;top:auto!important;width:auto;max-width:none;max-height:70vh;overflow:auto;padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+}
+@media (max-width:420px){ .cards{grid-template-columns:1fr} }

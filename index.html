@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1220">
+<title>AI 辦公室 v0 · 示範原型</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 fill=%22%23161a2b%22/%3E%3Crect x=%223%22 y=%224%22 width=%2210%22 height=%229%22 fill=%22%236fb7e8%22/%3E%3Crect x=%225%22 y=%227%22 width=%221%22 height=%222%22/%3E%3Crect x=%2210%22 y=%227%22 width=%221%22 height=%222%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="toolbar">
+  <div class="brand">🏢 AI 辦公室 <span class="ver">v0</span> <span class="count" id="agentCount"></span></div>
+  <div class="tools">
+    <button data-act="meeting">📋 召集會議</button>
+    <button data-act="work">💻 全員回座</button>
+    <button data-act="break">☕ 休息一下</button>
+    <button data-act="pause">⏸ 暫停</button>
+    <button data-act="labels">🏷 名牌</button>
+    <button data-act="reload">↻ 重讀額度</button>
+    <button data-act="zoom" class="narrow-only">🔍 放大地圖</button>
+  </div>
+  <div class="datasrc" id="dataSrc">額度資料載入中…</div>
+</header>
+
+<main class="layout">
+  <section class="stage">
+    <div class="map-wrap" id="mapWrap">
+      <canvas id="office" aria-label="像素風 AI 辦公室地圖，點擊角色查看詳細資訊"></canvas>
+      <div id="popover" class="popover" hidden></div>
+    </div>
+    <section class="panel cards-panel">
+      <div class="panel-head">
+        <h2>Agent 狀態與額度</h2>
+        <span class="badge demo" id="usageBadge">示範資料</span>
+        <span class="muted" id="usageUpdated"></span>
+      </div>
+      <div id="cards" class="cards"></div>
+    </section>
+  </section>
+
+  <aside class="sidebar">
+    <section class="panel agent-list">
+      <div class="panel-head"><h2>Agent 列表</h2></div>
+      <ul id="agentList"></ul>
+    </section>
+    <section class="panel chat">
+      <div class="panel-head"><h2>全員群聊</h2><span class="badge demo">示範對話</span></div>
+      <div id="chatLog" class="chat-log" aria-live="polite"></div>
+      <form id="chatForm" class="chat-form">
+        <input id="chatInput" placeholder="輸入訊息給全員，或 @名字 點名…" autocomplete="off" enterkeyhint="send">
+        <button type="submit">送出</button>
+      </form>
+    </section>
+  </aside>
+</main>
+<footer>AI 辦公室 v0 示範原型 · 額度與對話皆為<b>示範資料</b>，尚未接上真實 AI · 時間以台北時間顯示</footer>
+
+<script src="js/config.js"></script>
+<script src="js/usage-demo.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/office.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

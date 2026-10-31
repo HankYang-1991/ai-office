@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ai-office/usage.schema.json",
+  "title": "AI 辦公室共用額度資料 (usage.json)",
+  "description": "所有 Agent 共用的一份額度資料。每個 Agent 只寫入自己的 entries（以 agent_id + provider + window 為唯一鍵），並可讀取其他人的 entries。",
+  "type": "object",
+  "required": ["schema_version", "entries"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "is_demo": { "type": "boolean", "description": "true = 示範資料，頁面會顯示「示範資料」標籤" },
+    "note": { "type": "string" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["agent_id", "provider", "used", "limit", "reset_at", "updated_at"],
+        "properties": {
+          "agent_id":   { "type": "string", "description": "對應 js/config.js 裡 agents[].id" },
+          "provider":   { "type": "string", "description": "額度來源，例如 claude-code、codex、grok" },
+          "window":     { "type": "string", "description": "額度週期，例如 5h、daily、weekly、monthly" },
+          "used":       { "type": "number", "minimum": 0 },
+          "limit":      { "type": ["number", "null"], "exclusiveMinimum": 0, "description": "null = 無上限/未知" },
+          "unit":       { "type": "string", "description": "%, tok, USD, 張, credits…" },
+          "reset_at":   { "type": ["string", "null"], "format": "date-time", "description": "下次重置時間（ISO 8601，含時區）" },
+          "updated_at": { "type": "string", "format": "date-time", "description": "這筆資料最後更新時間" },
+          "updated_by": { "type": "string", "description": "寫入者（通常是 agent_id 本人）" },
+          "is_demo":    { "type": "boolean" },
+          "note":       { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}
