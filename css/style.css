@@ -103,6 +103,22 @@ h2{font-size:14px;margin:0;letter-spacing:.05em}
 .pv-actions button{background:var(--panel2);border:2px solid var(--line);border-radius:4px;padding:6px;font-size:12px;min-height:36px}
 .pv-actions button:hover{border-color:var(--gold)}
 
+/* 團隊額度 */
+.badge.live,.tag-live{background:#12301c;color:#9ef0b4;border:1px solid #2c6b3f}
+.tag-live{font-size:10px;padding:0 4px;border-radius:3px;margin-left:4px;font-weight:600}
+.tag-nc{margin-left:auto;font-size:10px;padding:0 5px;border-radius:3px;background:#2b2f45;color:#aab3d1;border:1px solid #444b70}
+.u-row.nc .u-meta{font-family:var(--font)}
+.team-usage{background:var(--panel2);border:2px solid var(--line);border-radius:5px;padding:8px 10px;margin-bottom:8px}
+.t-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.t-head b{font-size:14px}
+.t-pct{margin-left:auto;font-family:var(--mono);font-size:18px;font-weight:700;color:var(--gold)}
+.bar.big{height:12px}
+.stack{display:flex;height:8px;margin-top:6px;background:#0b0e19;border:1px solid #2f3760;overflow:hidden}
+.stack i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:4px;font-size:11px;color:#c9d0e6}
+.legend span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.legend i{width:8px;height:8px;display:inline-block}
+footer a{color:#8fb4ff}
 footer{text-align:center;color:var(--muted);font-size:11px;padding:8px 12px 20px}
 
 /* 手機/窄螢幕：地圖 → 卡片 → 側欄 堆疊 */

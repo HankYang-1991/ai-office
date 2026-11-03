@@ -48,10 +48,25 @@
 
   function pct(e) { return e.limit ? Math.max(0, Math.min(100, e.used / e.limit * 100)) : 0; }
   function barColor(p) { return p >= 85 ? '#ff5f57' : p >= 60 ? '#f5a623' : '#4cd964'; }
+  function teamEntry() { return (Usage.data && Usage.data.entries || []).find(e => e.agent_id === 'team'); }
+  function realRowHTML(e, detailed) {
+    if (e.connected === false || e.status === 'not_connected') {
+      return `<div class="u-row nc"><div class="u-label"><span>${esc(e.provider)}</span><span class="tag-nc">尚未接上</span></div>
+        <div class="u-meta">${detailed ? esc(e.note || '尚未接上額度回報') : '額度尚未接上'}</div></div>`;
+    }
+    const share = typeof e.share_pct === 'number' ? e.share_pct : 0;
+    const label = e.share_label && String(e.share_label).startsWith('<') ? esc(e.share_label) + '%' : fmtNum(share) + '%';
+    return `<div class="u-row">
+        <div class="u-label"><span>佔團隊用量</span><span class="u-pct">${label}</span></div>
+        <div class="bar"><i style="width:${Math.min(100, share)}%;background:${e.color || '#6fb7e8'}"></i></div>
+        <div class="u-meta">≈ 團隊每週額度的 ${fmtNum(e.used)}%${detailed ? `<br>重置 ${fmtDate(e.reset_at)}（${fmtLeft(e.reset_at)}）<br>更新 ${fmtDate(e.updated_at)} · by ${esc(e.updated_by || '—')}` : ''}</div>
+      </div>`;
+  }
   function usageHTML(id, detailed) {
     const list = Usage.get(id);
     if (!list.length) return '<div class="u-empty">尚無額度資料</div>';
     const demo = Usage.data.is_demo;
+    if (!demo) return list.map(e => realRowHTML(Object.assign({ color: cfgById[id] && cfgById[id].color }, e), detailed)).join('');
     return list.map(e => {
       const p = pct(e), demoTag = (demo || e.is_demo) ? '<span class="tag-demo">示範</span>' : '';
       return `<div class="u-row">
@@ -61,13 +76,28 @@
       </div>`;
     }).join('');
   }
+  function renderTeam() {
+    const box = $('#teamUsage'), t = teamEntry();
+    if (!t || Usage.data.is_demo) { box.hidden = true; return; }
+    const p = pct(t);
+    const ranked = C.agents.map(a => ({ a, e: Usage.get(a.id)[0] })).filter(x => x.e && x.e.connected !== false && x.e.share_pct > 0).sort((x, y) => y.e.share_pct - x.e.share_pct);
+    box.hidden = false;
+    box.innerHTML = `
+      <div class="t-head"><b>團隊每週額度</b><span class="muted">${esc(t.provider)} · 全員共用</span><span class="t-pct">${fmtNum(t.used)}%</span></div>
+      <div class="bar big"><i style="width:${p}%;background:${barColor(p)}"></i></div>
+      <div class="u-meta">已用 ${fmtNum(t.used)}% · 重置 ${fmtDate(t.reset_at)}（台北時間，${fmtLeft(t.reset_at)}）· 更新 ${fmtDate(t.updated_at)}</div>
+      <div class="stack" title="各 Agent 佔團隊用量">${ranked.map(x => `<i style="width:${x.e.share_pct}%;background:${x.a.color}" title="${esc(x.a.name)} ${x.e.share_pct}%"></i>`).join('')}</div>
+      <div class="legend">${ranked.map(x => `<span><i style="background:${x.a.color}"></i>${esc(x.a.short)} ${x.e.share_label && String(x.e.share_label).startsWith('<') ? esc(x.e.share_label) : fmtNum(x.e.share_pct)}%</span>`).join('')}</div>`;
+  }
   function renderUsage() {
     for (const a of C.agents) { const el = document.querySelector(`.card[data-id="${a.id}"] .usage`); if (el) el.innerHTML = usageHTML(a.id); }
+    renderTeam();
     const src = Usage.source === 'file' ? `額度來源：${C.usageUrl}` : '額度來源：內建示範資料（讀不到 usage.json）';
-    $('#dataSrc').textContent = src + (Usage.data.is_demo ? ' · 示範資料' : '');
+    $('#dataSrc').textContent = src + (Usage.data.is_demo ? ' · 示範資料' : ' · 真實用量');
     $('#dataSrc').title = Usage.error || '';
     $('#usageUpdated').textContent = `讀取於 ${fmtT.format(Usage.loadedAt)}（台北時間）`;
     $('#usageBadge').hidden = !Usage.data.is_demo;
+    $('#usageLive').hidden = !!Usage.data.is_demo;
     if (openId) renderPopover();
   }
 
@@ -116,7 +146,7 @@
       </div>
       <div class="pv-status" id="pvStatus"></div>
       <p class="pv-intro">${esc(a.intro)}</p>
-      <div class="pv-sec">額度 ${Usage.data && Usage.data.is_demo ? '<span class="tag-demo">示範資料</span>' : ''}</div>
+      <div class="pv-sec">額度 ${Usage.data && Usage.data.is_demo ? '<span class="tag-demo">示範資料</span>' : '<span class="tag-live">真實用量</span>'}</div>
       <div class="pv-usage">${usageHTML(a.id, true)}</div>
       <div class="pv-actions">
         <button data-pv="mention">@ 點名發言</button>

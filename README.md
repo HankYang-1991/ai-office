@@ -1,11 +1,50 @@
-# AI 辦公室 v0（示範原型）
+# AI 辦公室
 
 像素風 AI 辦公室：每位 AI Agent 是一個會在辦公室走動的小角色，下方顯示狀態與額度，右側是 Agent 列表與全員群聊。
-**目前所有額度數字與群聊回覆都是示範資料，尚未接上任何真實 AI 或額度 API。**
+**額度是真實用量**（每小時由 Grok Bot 用量報告更新）；群聊回覆目前仍是示範對話。
 
 線上版：https://hankyang-1991.github.io/ai-office/
 
-`data/usage.json` 裡的額度數字是示範資料（`is_demo: true`），不是真實用量。
+## 真實額度（每小時更新）
+- 整個團隊共用**一個 Grok Bot 每週額度**。頁面上方的「團隊每週額度」顯示已用 % 和重置時間（台北時間）。
+- 每張 Agent 卡片顯示該 Agent「佔團隊用量」的比例，以及換算成團隊每週額度的百分比
+  （`used = 佔比% × 團隊已用%`，例如團隊已用 22.5%、沼王小寶佔 41% → 約 9.22%）。
+- **codex-小沼王** 跑在 Hank 筆電上的 OpenAI Codex，不在 Grok Bot 報告內，顯示「尚未接上」。
+- 更新流程：澳洲企鵝的排程每小時取得 Grok Bot 用量報告 → 執行 `scripts/publish_usage.py` →
+  內容有變才 commit + push `data/usage.json` → GitHub Actions 自動部署到 Pages（約 1 分鐘）。
+
+### 任何 Agent 讀取彼此的額度
+```bash
+curl -s https://hankyang-1991.github.io/ai-office/data/usage.json
+```
+```python
+import json, urllib.request
+d = json.load(urllib.request.urlopen("https://hankyang-1991.github.io/ai-office/data/usage.json"))
+print(d["team"]["used_pct"], d["team"]["reset_at"])           # 團隊每週已用 %、重置時間
+for e in d["entries"]:
+    print(e["agent_id"], e.get("share_pct"), e["used"], e.get("connected"))
+```
+- `team`：`used_pct`（團隊每週已用 %）、`reset_at`（ISO 8601，+08:00）
+- `entries[]`：`agent_id == "team"` 是團隊總計；其他每個 Agent 一筆，
+  `share_pct` = 佔團隊用量 %、`used` = 佔團隊每週額度 %、`connected: false` = 尚未接上
+- GitHub Pages 有快取，最新內容通常在 push 後 1～10 分鐘內可讀到。
+
+### 發布用量（scripts/publish_usage.py）
+```bash
+cd ai-office   # repo 根目錄
+export AI_OFFICE_GITHUB_TOKEN=...   # fine-grained token，只限 ai-office，Contents: Read and write
+python3 scripts/publish_usage.py report.json        # 或用 - 從 stdin 讀
+python3 scripts/publish_usage.py report.json --dry-run   # 只印出，不寫檔
+python3 scripts/publish_usage.py report.json --no-push   # 只寫檔，不 commit/push
+```
+輸入格式：
+```json
+{"team_used_pct": 22.5, "reset_at": "2026-11-07T23:44:00+08:00",
+ "shares": {"沼王小寶-攝影師": 41, "小主人-電機繪圖專家": 28, "澳洲企鵝🐧-AI 辦公室城市設計師": "<1"}}
+```
+- `shares` 的名稱會自動對應到 `js/config.js` 的 Agent（名稱開頭比對，忽略空白與 emoji）；`"<1"` 視為 0.5
+- 對不到的名稱會在 stderr 警告並記在 `unmapped_shares`；可在腳本的 `ALIASES` 加別名
+- 只有時間戳不同時不會 commit；失敗時 exit code 非 0
 
 ## 執行
 純靜態網站，不需要 build，也不使用外部 CDN。在儲存庫根目錄：

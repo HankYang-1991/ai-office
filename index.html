@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0f1220">
-<title>AI 辦公室 v0 · 示範原型</title>
+<title>AI 辦公室</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 fill=%22%23161a2b%22/%3E%3Crect x=%223%22 y=%224%22 width=%2210%22 height=%229%22 fill=%22%236fb7e8%22/%3E%3Crect x=%225%22 y=%227%22 width=%221%22 height=%222%22/%3E%3Crect x=%2210%22 y=%227%22 width=%221%22 height=%222%22/%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css">
 </head>
@@ -33,8 +33,10 @@
       <div class="panel-head">
         <h2>Agent 狀態與額度</h2>
         <span class="badge demo" id="usageBadge">示範資料</span>
+        <span class="badge live" id="usageLive" hidden>真實用量</span>
         <span class="muted" id="usageUpdated"></span>
       </div>
+      <div id="teamUsage" class="team-usage" hidden></div>
       <div id="cards" class="cards"></div>
     </section>
   </section>
@@ -54,7 +56,7 @@
     </section>
   </aside>
 </main>
-<footer>AI 辦公室 v0 示範原型 · 額度與對話皆為<b>示範資料</b>，尚未接上真實 AI · 時間以台北時間顯示</footer>
+<footer>AI 辦公室 · 額度每小時由 Grok Bot 用量報告更新（<a href="data/usage.json">usage.json</a>）· 群聊仍為<b>示範對話</b> · 時間以台北時間顯示</footer>
 
 <script src="js/config.js"></script>
 <script src="js/usage-demo.js"></script>
