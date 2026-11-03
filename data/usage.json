@@ -2,12 +2,12 @@
   "schema_version": 1,
   "is_demo": false,
   "source": "Grok Bot 用量報告（每小時更新）",
-  "generated_at": "2026-11-03T14:02:58+08:00",
+  "generated_at": "2026-11-03T16:05:31+08:00",
   "updated_by": "澳洲企鵝",
   "team": {
     "provider": "grok-bot",
     "window": "weekly",
-    "used_pct": 23.9,
+    "used_pct": 24.1,
     "limit": 100,
     "unit": "%",
     "reset_at": "2026-11-07T23:44:00+08:00"
@@ -16,7 +16,7 @@
   "entries": [
     {
       "agent_id": "team",
-      "used": 23.9,
+      "used": 24.1,
       "scope": "team",
       "note": "整個團隊共用的 Grok Bot 每週額度",
       "provider": "grok-bot",
@@ -24,12 +24,12 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-07T23:44:00+08:00",
-      "updated_at": "2026-11-03T14:02:58+08:00",
+      "updated_at": "2026-11-03T16:05:31+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
       "agent_id": "da-zhuren",
-      "used": 3.11,
+      "used": 3.13,
       "share_pct": 13.0,
       "share_label": "13",
       "report_name": "大主人-電機專案經理",
@@ -40,12 +40,12 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-07T23:44:00+08:00",
-      "updated_at": "2026-11-03T14:02:58+08:00",
+      "updated_at": "2026-11-03T16:05:31+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
       "agent_id": "xiao-zhuren",
-      "used": 6.21,
+      "used": 6.27,
       "share_pct": 26.0,
       "share_label": "26",
       "report_name": "小主人-電機繪圖專家",
@@ -56,7 +56,7 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-07T23:44:00+08:00",
-      "updated_at": "2026-11-03T14:02:58+08:00",
+      "updated_at": "2026-11-03T16:05:31+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
@@ -67,7 +67,7 @@
       "limit": null,
       "unit": "%",
       "reset_at": null,
-      "updated_at": "2026-11-03T14:02:58+08:00",
+      "updated_at": "2026-11-03T16:05:31+08:00",
       "updated_by": "澳洲企鵝",
       "connected": false,
       "status": "not_connected",
@@ -75,7 +75,7 @@
     },
     {
       "agent_id": "da-zhaowang",
-      "used": 1.91,
+      "used": 1.93,
       "share_pct": 8.0,
       "share_label": "8",
       "report_name": "大沼王-漫畫家",
@@ -86,28 +86,28 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-07T23:44:00+08:00",
-      "updated_at": "2026-11-03T14:02:58+08:00",
+      "updated_at": "2026-11-03T16:05:31+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
       "agent_id": "zhaowang-xiaobao",
-      "used": 9.32,
-      "share_pct": 39.0,
-      "share_label": "39",
+      "used": 9.16,
+      "share_pct": 38.0,
+      "share_label": "38",
       "report_name": "沼王小寶-攝影師",
       "connected": true,
-      "note": "佔團隊 Grok Bot 用量 39%；used = 佔團隊每週額度的百分比",
+      "note": "佔團隊 Grok Bot 用量 38%；used = 佔團隊每週額度的百分比",
       "provider": "grok-bot",
       "window": "weekly",
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-07T23:44:00+08:00",
-      "updated_at": "2026-11-03T14:02:58+08:00",
+      "updated_at": "2026-11-03T16:05:31+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
       "agent_id": "jiantou-xiao-zhaowang",
-      "used": 1.2,
+      "used": 1.21,
       "share_pct": 5.0,
       "share_label": "5",
       "report_name": "尖頭小沼王-音樂家",
@@ -118,28 +118,28 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-07T23:44:00+08:00",
-      "updated_at": "2026-11-03T14:02:58+08:00",
+      "updated_at": "2026-11-03T16:05:31+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
       "agent_id": "grok-bot",
-      "used": 0.72,
-      "share_pct": 3.0,
-      "share_label": "3",
+      "used": 0.96,
+      "share_pct": 4.0,
+      "share_label": "4",
       "report_name": "Grok Bot",
       "connected": true,
-      "note": "佔團隊 Grok Bot 用量 3%；used = 佔團隊每週額度的百分比",
+      "note": "佔團隊 Grok Bot 用量 4%；used = 佔團隊每週額度的百分比",
       "provider": "grok-bot",
       "window": "weekly",
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-07T23:44:00+08:00",
-      "updated_at": "2026-11-03T14:02:58+08:00",
+      "updated_at": "2026-11-03T16:05:31+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
       "agent_id": "au-penguin",
-      "used": 1.43,
+      "used": 1.45,
       "share_pct": 6.0,
       "share_label": "6",
       "report_name": "澳洲企鵝🐧-AI 辦公室城市設計師",
@@ -150,7 +150,7 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-07T23:44:00+08:00",
-      "updated_at": "2026-11-03T14:02:58+08:00",
+      "updated_at": "2026-11-03T16:05:31+08:00",
       "updated_by": "澳洲企鵝"
     }
   ]
