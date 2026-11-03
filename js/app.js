@@ -54,6 +54,14 @@
       return `<div class="u-row nc"><div class="u-label"><span>${esc(e.provider)}</span><span class="tag-nc">尚未接上</span></div>
         <div class="u-meta">${detailed ? esc(e.note || '尚未接上額度回報') : '額度尚未接上'}</div></div>`;
     }
+    if (e.scope === 'own') {
+      const p = pct(e);
+      return `<div class="u-row">
+        <div class="u-label"><span>${esc(WIN[e.window] || e.window || '')}</span><span class="u-pct">${fmtNum(e.used)}%</span></div>
+        <div class="bar"><i style="width:${p}%;background:${barColor(p)}"></i></div>
+        <div class="u-meta">重置 ${fmtDate(e.reset_at)}${detailed && e.reset_at ? `（${fmtLeft(e.reset_at)}）` : ''}</div>
+      </div>`;
+    }
     const share = typeof e.share_pct === 'number' ? e.share_pct : 0;
     const label = e.share_label && String(e.share_label).startsWith('<') ? esc(e.share_label) + '%' : fmtNum(share) + '%';
     return `<div class="u-row">
@@ -66,7 +74,17 @@
     const list = Usage.get(id);
     if (!list.length) return '<div class="u-empty">尚無額度資料</div>';
     const demo = Usage.data.is_demo;
-    if (!demo) return list.map(e => realRowHTML(Object.assign({ color: cfgById[id] && cfgById[id].color }, e), detailed)).join('');
+    if (!demo) {
+      const own = list.filter(e => e.scope === 'own' && e.connected !== false);
+      let head = '';
+      if (own.length) {
+        const e0 = own[0], age = Date.now() - new Date(e0.updated_at);
+        const stale = own.some(e => e.stale) || e0.updated_at_unknown || isNaN(age) || age > 24 * 3600e3;
+        head = `<div class="u-own"><span class="tag-own">OpenAI 獨立額度</span>${e0.plan ? `<span class="muted">${esc(e0.plan)}</span>` : ''}${stale ? '<span class="tag-stale">資料過舊</span>' : ''}</div>` +
+          (detailed ? `<div class="u-meta">Codex 回報於 ${fmtDate(e0.updated_at)} · 不算在團隊額度內</div>` : '');
+      }
+      return head + list.map(e => realRowHTML(Object.assign({ color: cfgById[id] && cfgById[id].color }, e), detailed)).join('');
+    }
     return list.map(e => {
       const p = pct(e), demoTag = (demo || e.is_demo) ? '<span class="tag-demo">示範</span>' : '';
       return `<div class="u-row">

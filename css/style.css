@@ -107,6 +107,9 @@ h2{font-size:14px;margin:0;letter-spacing:.05em}
 .badge.live,.tag-live{background:#12301c;color:#9ef0b4;border:1px solid #2c6b3f}
 .tag-live{font-size:10px;padding:0 4px;border-radius:3px;margin-left:4px;font-weight:600}
 .tag-nc{margin-left:auto;font-size:10px;padding:0 5px;border-radius:3px;background:#2b2f45;color:#aab3d1;border:1px solid #444b70}
+.u-own{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:2px}
+.tag-own{font-size:10px;padding:0 5px;border-radius:3px;background:#10302e;color:#8ff0dc;border:1px solid #2a7a6c;font-weight:600}
+.tag-stale{font-size:10px;padding:0 5px;border-radius:3px;background:#3a1616;color:#ffa0a0;border:1px solid #8a3a3a;font-weight:600}
 .u-row.nc .u-meta{font-family:var(--font)}
 .team-usage{background:var(--panel2);border:2px solid var(--line);border-radius:5px;padding:8px 10px;margin-bottom:8px}
 .t-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}

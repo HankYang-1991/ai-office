@@ -9,7 +9,10 @@
 - 整個團隊共用**一個 Grok Bot 每週額度**。頁面上方的「團隊每週額度」顯示已用 % 和重置時間（台北時間）。
 - 每張 Agent 卡片顯示該 Agent「佔團隊用量」的比例，以及換算成團隊每週額度的百分比
   （`used = 佔比% × 團隊已用%`，例如團隊已用 22.5%、沼王小寶佔 41% → 約 9.22%）。
-- **codex-小沼王** 跑在 Hank 筆電上的 OpenAI Codex，不在 Grok Bot 報告內，顯示「尚未接上」。
+- **codex-小沼王** 跑在 Hank 筆電上的 OpenAI Codex，有**自己的 OpenAI 獨立額度**（不算在團隊額度內）：
+  卡片顯示「OpenAI 獨立額度」標籤、5 小時與每週兩條額度條和重置時間（台北時間）。
+  Codex 把用量發布到 Crosswalk（`grokquagsire`，路徑 `ai-office/codex-usage.json`），由每小時的排程帶進來。
+  回報時間超過 24 小時會顯示「資料過舊」；從沒回報過則顯示「尚未接上」。
 - 更新流程：澳洲企鵝的排程每小時取得 Grok Bot 用量報告 → 執行 `scripts/publish_usage.py` →
   內容有變才 commit + push `data/usage.json` → GitHub Actions 自動部署到 Pages（約 1 分鐘）。
 
@@ -25,7 +28,8 @@ for e in d["entries"]:
     print(e["agent_id"], e.get("share_pct"), e["used"], e.get("connected"))
 ```
 - `team`：`used_pct`（團隊每週已用 %）、`reset_at`（ISO 8601，+08:00）
-- `entries[]`：`agent_id == "team"` 是團隊總計；其他每個 Agent 一筆，
+- `entries[]`：`agent_id == "team"` 是團隊總計；其他每個 Agent 一筆（codex-小沼王 是 5h + weekly 兩筆，
+  `scope: "own"`、`used` = 自己 OpenAI 額度已用 %、`stale: true` = 超過 24 小時沒更新），
   `share_pct` = 佔團隊用量 %、`used` = 佔團隊每週額度 %、`connected: false` = 尚未接上
 - GitHub Pages 有快取，最新內容通常在 push 後 1～10 分鐘內可讀到。
 
@@ -42,6 +46,15 @@ python3 scripts/publish_usage.py report.json --no-push   # 只寫檔，不 commi
 {"team_used_pct": 22.5, "reset_at": "2026-11-07T23:44:00+08:00",
  "shares": {"沼王小寶-攝影師": 41, "小主人-電機繪圖專家": 28, "澳洲企鵝🐧-AI 辦公室城市設計師": "<1"}}
 ```
+- 選填 `codex`（或 `--codex-file 檔案路徑`，會覆蓋輸入裡的 `codex`）：codex-小沼王 的 OpenAI Codex 用量，任何欄位都可以是 null
+  ```json
+  {"agent": "codex-小沼王", "provider": "openai-codex", "plan": "Plus",
+   "primary":   {"window": "5h",     "used_pct": 12.0, "reset_at": "2026-11-03T20:10:00+08:00"},
+   "secondary": {"window": "weekly", "used_pct": 34.0, "reset_at": "2026-11-08T09:00:00+08:00"},
+   "updated_at": "2026-11-03T16:00:00+08:00", "source": "..."}
+  ```
+  `used_pct` 必須是 0～100 的數字，否則略過該條；時間必須是含時區的 ISO 8601。全部無效或沒提供 `codex` 時，
+  沿用目前 `data/usage.json` 裡的 codex 資料（不會被只有團隊資料的更新洗掉），從沒有過則顯示尚未接上。
 - `shares` 的名稱會自動對應到 `js/config.js` 的 Agent（名稱開頭比對，忽略空白與 emoji）；`"<1"` 視為 0.5
 - 對不到的名稱會在 stderr 警告並記在 `unmapped_shares`；可在腳本的 `ALIASES` 加別名
 - 只有時間戳不同時不會 commit；失敗時 exit code 非 0

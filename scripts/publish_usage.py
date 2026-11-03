@@ -5,6 +5,12 @@
   python3 scripts/publish_usage.py report.json
   echo '{"team_used_pct":22.5,"reset_at":"2026-11-07T23:44:00+08:00","shares":{"沼王小寶-攝影師":41}}' \
     | python3 scripts/publish_usage.py -
+codex-小沼王 的 OpenAI Codex 獨立額度（不算在團隊額度內）：在輸入加 "codex": {...}，或用 --codex-file 路徑。
+  {"agent":"codex-小沼王","provider":"openai-codex","plan":"Plus",
+   "primary":{"window":"5h","used_pct":12.0,"reset_at":"...+08:00"},
+   "secondary":{"window":"weekly","used_pct":34.0,"reset_at":"...+08:00"},
+   "updated_at":"...+08:00","source":"..."}
+  沒提供時沿用目前 data/usage.json 裡的 codex 資料（沒有則顯示尚未接上）。
 選項：--no-push 只寫檔不 commit/push；--dry-run 只印出結果不寫檔。
 推送需要環境變數 AI_OFFICE_GITHUB_TOKEN（GitHub fine-grained token，ai-office repo Contents: write）。
 """
@@ -19,6 +25,9 @@ UPDATED_BY = "澳洲企鵝"
 PROVIDER = "grok-bot"
 # 不在 Grok Bot 用量報告裡的 Agent（例如在 Hank 筆電上跑的 OpenAI Codex）
 NOT_CONNECTED = {"codex-xiao-zhaowang": ("codex", "OpenAI Codex，在 Hank 的筆電上執行，尚未接上額度回報")}
+CODEX_ID = "codex-xiao-zhaowang"
+CODEX_NAME = "codex-小沼王"
+STALE_HOURS = 24
 # 報告名稱 → agent_id 的額外別名（自動比對失敗時才用）
 ALIASES = {}
 
@@ -67,7 +76,82 @@ def parse_pct(v, what):
         die(f"{what} 不是數字：{v!r}")
 
 
-def build(report, agents):
+def parse_time(v):
+    if not isinstance(v, str):
+        return None
+    try:
+        t = dt.datetime.fromisoformat(v.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return t if t.tzinfo else None
+
+
+def valid_pct(v):
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        try:
+            v = float(str(v).strip().replace("%", ""))
+        except (ValueError, TypeError):
+            return None
+    v = float(v)
+    return round(v, 2) if 0 <= v <= 100 else None
+
+
+def is_stale(updated_at, now):
+    t = parse_time(updated_at)
+    return t is None or (now - t).total_seconds() > STALE_HOURS * 3600
+
+
+def codex_entries(obj, now):
+    """把 Codex 用量物件轉成 entries；資料完全無效時回傳 None。"""
+    if not isinstance(obj, dict):
+        print("警告：codex 資料不是物件，略過", file=sys.stderr)
+        return None
+    upd_t = parse_time(obj.get("updated_at"))
+    upd = upd_t.astimezone(TZ).isoformat() if upd_t else None
+    prov = obj.get("provider") if isinstance(obj.get("provider"), str) and obj.get("provider").strip() else "openai-codex"
+    plan = obj.get("plan") if isinstance(obj.get("plan"), str) else None
+    src = obj.get("source") if isinstance(obj.get("source"), str) else None
+    stale = is_stale(upd, now)
+    out = []
+    for key, default_win in (("primary", "5h"), ("secondary", "weekly")):
+        w = obj.get(key)
+        if not isinstance(w, dict):
+            continue
+        used = valid_pct(w.get("used_pct"))
+        if used is None:
+            if w.get("used_pct") is not None:
+                print(f"警告：codex.{key}.used_pct 無效（{w.get('used_pct')!r}），略過", file=sys.stderr)
+            continue
+        win = w.get("window") if isinstance(w.get("window"), str) and w.get("window").strip() else default_win
+        rt = parse_time(w.get("reset_at"))
+        e = dict(agent_id=CODEX_ID, provider=prov, window=win.strip(), used=used, limit=100, unit="%",
+                 reset_at=rt.astimezone(TZ).isoformat() if rt else None,
+                 updated_at=upd or now.isoformat(), updated_by=CODEX_NAME, connected=True,
+                 scope="own", stale=stale, slot=key,
+                 note="OpenAI Codex 獨立額度（不算在團隊額度內）")
+        if plan:
+            e["plan"] = plan
+        if src:
+            e["source"] = src[:200]
+        if not upd:
+            e["updated_at_unknown"] = True
+        out.append(e)
+    if not out:
+        print("警告：codex 資料沒有有效的 used_pct，略過", file=sys.stderr)
+        return None
+    return out
+
+
+def previous_codex(old, now):
+    if not isinstance(old, dict):
+        return None
+    prev = [e for e in old.get("entries", []) if isinstance(e, dict) and e.get("agent_id") == CODEX_ID and e.get("connected")]
+    for e in prev:
+        e["stale"] = True if e.get("updated_at_unknown") else is_stale(e.get("updated_at"), now)
+    return prev or None
+
+
+def build(report, agents, codex=None):
     team = parse_pct(report.get("team_used_pct"), "team_used_pct")
     reset_at = report.get("reset_at")
     try:
@@ -77,7 +161,8 @@ def build(report, agents):
     shares = report.get("shares")
     if not isinstance(shares, dict) or not shares:
         die("shares 必須是 {bot 名稱: 百分比} 物件")
-    now = dt.datetime.now(TZ).replace(microsecond=0).isoformat()
+    now_dt = dt.datetime.now(TZ).replace(microsecond=0)
+    now = now_dt.isoformat()
     base = dict(provider=PROVIDER, window="weekly", limit=100, unit="%", reset_at=reset_at,
                 updated_at=now, updated_by=UPDATED_BY)
     entries = [dict(agent_id="team", used=round(team, 2), scope="team",
@@ -105,6 +190,8 @@ def build(report, agents):
                                 report_name=" / ".join(m["names"]), connected=True,
                                 note=f"佔團隊 Grok Bot 用量 {m['raw'] if len(m['names']) == 1 else share}%；used = 佔團隊每週額度的百分比",
                                 **base))
+        elif aid == CODEX_ID and codex:
+            entries.extend(codex)
         elif aid in NOT_CONNECTED:
             prov, note = NOT_CONNECTED[aid]
             entries.append(dict(agent_id=aid, provider=prov, window="weekly", used=0, limit=None, unit="%",
@@ -123,7 +210,8 @@ def strip_ts(d):
     d = json.loads(json.dumps(d))
     d.pop("generated_at", None)
     for e in d.get("entries", []):
-        e.pop("updated_at", None)
+        if e.get("updated_by") == UPDATED_BY:  # codex 的 updated_at 來自它自己的檔案，要保留比對
+            e.pop("updated_at", None)
     return d
 
 
@@ -141,6 +229,7 @@ def git(*args, check=True):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("input", nargs="?", default="-", help="報告 JSON 檔案路徑，或 - 代表 stdin")
+    ap.add_argument("--codex-file", help="codex-小沼王 的 Codex 用量 JSON 檔（覆蓋輸入裡的 codex 欄位）")
     ap.add_argument("--no-push", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
@@ -154,29 +243,44 @@ def main():
         if not os.environ.get("AI_OFFICE_GITHUB_TOKEN"):
             die("沒有設定 AI_OFFICE_GITHUB_TOKEN")
         git("pull", "--rebase", "--quiet", "origin", "main")
-    data = build(report, load_agents())
-    if a.dry_run:
-        print(json.dumps(data, ensure_ascii=False, indent=2))
-        return
+    if not isinstance(report, dict):
+        die("輸入必須是 JSON 物件")
+    codex_obj = report.get("codex")
+    if a.codex_file:
+        try:
+            codex_obj = json.loads(Path(a.codex_file).read_text(encoding="utf-8"))
+        except Exception as e:
+            die(f"讀不到 --codex-file：{e}")
     old = None
     if USAGE.exists():
         try:
             old = json.loads(USAGE.read_text(encoding="utf-8"))
         except Exception:
             pass
+    now_dt = dt.datetime.now(TZ).replace(microsecond=0)
+    codex = codex_entries(codex_obj, now_dt) if codex_obj is not None else None
+    codex_src = "新資料" if codex else None
+    if codex is None:
+        codex = previous_codex(old, now_dt)
+        codex_src = "沿用上次" if codex else "尚未接上"
+    data = build(report, load_agents(), codex)
+    if a.dry_run:
+        print(json.dumps(data, ensure_ascii=False, indent=2))
+        print(f"codex：{codex_src}", file=sys.stderr)
+        return
     team = data["team"]["used_pct"]
     if old is not None and strip_ts(old) == strip_ts(data):
-        print(f"沒有變化：團隊每週已用 {team}%，未 commit")
+        print(f"沒有變化：團隊每週已用 {team}%，codex：{codex_src}，未 commit")
         return
     USAGE.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if not push:
-        print(f"已寫入 {USAGE}（未 push）：團隊每週已用 {team}%")
+        print(f"已寫入 {USAGE}（未 push）：團隊每週已用 {team}%，codex：{codex_src}")
         return
     git("add", "data/usage.json")
     git("commit", "--quiet", "-m", f"Update usage: team weekly {team}% used")
     git("push", "--quiet", "origin", "HEAD:main")
     sha = git("rev-parse", "--short", "HEAD").stdout.strip()
-    print(f"已更新並推送 {sha}：團隊每週已用 {team}%，重置 {data['team']['reset_at']}，{len(data['entries'])} 筆")
+    print(f"已更新並推送 {sha}：團隊每週已用 {team}%，重置 {data['team']['reset_at']}，{len(data['entries'])} 筆，codex：{codex_src}")
 
 
 if __name__ == "__main__":
