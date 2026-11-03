@@ -10,6 +10,8 @@ codex-小沼王 的 OpenAI Codex 獨立額度（不算在團隊額度內）：�
    "primary":{"window":"5h","used_pct":12.0,"reset_at":"...+08:00"},
    "secondary":{"window":"weekly","used_pct":34.0,"reset_at":"...+08:00"},
    "updated_at":"...+08:00","source":"..."}
+  每個時段可給 used_pct，或給 remaining_pct（used = 100 - remaining）；window 沒給時預設 5h / weekly；
+  時間可用 Z（UTC）或 +08:00，一律轉成台北時間。secondary 為 null 時網站顯示「每週 尚未回報」。
   沒提供時沿用目前 data/usage.json 裡的 codex 資料（沒有則顯示尚未接上）。
 選項：--no-push 只寫檔不 commit/push；--dry-run 只印出結果不寫檔。
 推送需要環境變數 AI_OFFICE_GITHUB_TOKEN（GitHub fine-grained token，ai-office repo Contents: write）。
@@ -107,28 +109,34 @@ def codex_entries(obj, now):
         print("警告：codex 資料不是物件，略過", file=sys.stderr)
         return None
     upd_t = parse_time(obj.get("updated_at"))
-    upd = upd_t.astimezone(TZ).isoformat() if upd_t else None
+    upd = upd_t.astimezone(TZ).replace(microsecond=0).isoformat() if upd_t else None
     prov = obj.get("provider") if isinstance(obj.get("provider"), str) and obj.get("provider").strip() else "openai-codex"
     plan = obj.get("plan") if isinstance(obj.get("plan"), str) else None
     src = obj.get("source") if isinstance(obj.get("source"), str) else None
     stale = is_stale(upd, now)
-    out = []
+    out, got = [], 0
     for key, default_win in (("primary", "5h"), ("secondary", "weekly")):
         w = obj.get(key)
-        if not isinstance(w, dict):
-            continue
-        used = valid_pct(w.get("used_pct"))
-        if used is None:
-            if w.get("used_pct") is not None:
-                print(f"警告：codex.{key}.used_pct 無效（{w.get('used_pct')!r}），略過", file=sys.stderr)
-            continue
+        w = w if isinstance(w, dict) else {}
+        used = valid_pct(w.get("used_pct")) if w.get("used_pct") is not None else None
+        if used is None and w.get("used_pct") is not None:
+            print(f"警告：codex.{key}.used_pct 無效（{w.get('used_pct')!r}），改看 remaining_pct", file=sys.stderr)
+        if used is None and w.get("remaining_pct") is not None:
+            rem = valid_pct(w.get("remaining_pct"))
+            if rem is None:
+                print(f"警告：codex.{key}.remaining_pct 無效（{w.get('remaining_pct')!r}），略過", file=sys.stderr)
+            else:
+                used = round(min(100.0, max(0.0, 100 - rem)), 2)
         win = w.get("window") if isinstance(w.get("window"), str) and w.get("window").strip() else default_win
         rt = parse_time(w.get("reset_at"))
-        e = dict(agent_id=CODEX_ID, provider=prov, window=win.strip(), used=used, limit=100, unit="%",
-                 reset_at=rt.astimezone(TZ).isoformat() if rt else None,
+        e = dict(agent_id=CODEX_ID, provider=prov, window=win.strip(), used=used if used is not None else 0,
+                 limit=100 if used is not None else None, unit="%",
+                 reset_at=rt.astimezone(TZ).replace(microsecond=0).isoformat() if rt else None,
                  updated_at=upd or now.isoformat(), updated_by=CODEX_NAME, connected=True,
-                 scope="own", stale=stale, slot=key,
-                 note="OpenAI Codex 獨立額度（不算在團隊額度內）")
+                 scope="own", stale=stale, slot=key, reported=used is not None,
+                 note="OpenAI Codex 獨立額度（不算在團隊額度內）" if used is not None else "Codex 尚未回報這個時段的額度")
+        if used is not None:
+            got += 1
         if plan:
             e["plan"] = plan
         if src:
@@ -136,8 +144,8 @@ def codex_entries(obj, now):
         if not upd:
             e["updated_at_unknown"] = True
         out.append(e)
-    if not out:
-        print("警告：codex 資料沒有有效的 used_pct，略過", file=sys.stderr)
+    if not got:
+        print("警告：codex 資料沒有有效的 used_pct / remaining_pct，略過", file=sys.stderr)
         return None
     return out
 
@@ -190,6 +198,8 @@ def build(report, agents, codex=None):
                                 report_name=" / ".join(m["names"]), connected=True,
                                 note=f"佔團隊 Grok Bot 用量 {m['raw'] if len(m['names']) == 1 else share}%；used = 佔團隊每週額度的百分比",
                                 **base))
+            if aid == CODEX_ID and codex:  # 同名 Grok Bot 的團隊用量 + Codex 自己的 OpenAI 額度都要顯示
+                entries.extend(codex)
         elif aid == CODEX_ID and codex:
             entries.extend(codex)
         elif aid in NOT_CONNECTED:

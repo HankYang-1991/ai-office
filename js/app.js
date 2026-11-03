@@ -54,6 +54,10 @@
       return `<div class="u-row nc"><div class="u-label"><span>${esc(e.provider)}</span><span class="tag-nc">尚未接上</span></div>
         <div class="u-meta">${detailed ? esc(e.note || '尚未接上額度回報') : '額度尚未接上'}</div></div>`;
     }
+    if (e.scope === 'own' && (e.reported === false || typeof e.limit !== 'number')) {
+      return `<div class="u-row nc"><div class="u-label"><span>${esc(WIN[e.window] || e.window || '')}</span><span class="tag-nc">尚未回報</span></div>
+        <div class="u-meta">${detailed ? esc(e.note || 'Codex 尚未回報這個時段的額度') : 'Codex 尚未回報'}</div></div>`;
+    }
     if (e.scope === 'own') {
       const p = pct(e);
       return `<div class="u-row">

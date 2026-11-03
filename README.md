@@ -28,8 +28,8 @@ for e in d["entries"]:
     print(e["agent_id"], e.get("share_pct"), e["used"], e.get("connected"))
 ```
 - `team`：`used_pct`（團隊每週已用 %）、`reset_at`（ISO 8601，+08:00）
-- `entries[]`：`agent_id == "team"` 是團隊總計；其他每個 Agent 一筆（codex-小沼王 是 5h + weekly 兩筆，
-  `scope: "own"`、`used` = 自己 OpenAI 額度已用 %、`stale: true` = 超過 24 小時沒更新），
+- `entries[]`：`agent_id == "team"` 是團隊總計；其他每個 Agent 一筆（codex-小沼王 另有 5h + weekly 兩筆，
+  `scope: "own"`、`used` = 自己 OpenAI 額度已用 %、`stale: true` = 超過 24 小時沒更新、`reported: false` = 該時段尚未回報），
   `share_pct` = 佔團隊用量 %、`used` = 佔團隊每週額度 %、`connected: false` = 尚未接上
 - GitHub Pages 有快取，最新內容通常在 push 後 1～10 分鐘內可讀到。
 
@@ -53,7 +53,10 @@ python3 scripts/publish_usage.py report.json --no-push   # 只寫檔，不 commi
    "secondary": {"window": "weekly", "used_pct": 34.0, "reset_at": "2026-11-08T09:00:00+08:00"},
    "updated_at": "2026-11-03T16:00:00+08:00", "source": "..."}
   ```
-  `used_pct` 必須是 0～100 的數字，否則略過該條；時間必須是含時區的 ISO 8601。全部無效或沒提供 `codex` 時，
+  每條可給 `used_pct`（0～100），或只給 `remaining_pct`（剩餘 %，會換算成 used = 100 − remaining）；`window` 沒給時
+  預設 `5h` / `weekly`。時間必須是含時區的 ISO 8601（`Z`／UTC 也可以，一律轉成台北時間 +08:00）。
+  `secondary` 為 null 時，卡片照樣顯示 5 小時額度，每週那條顯示「尚未回報」（JSON 裡 `reported: false`、`limit: null`）。
+  codex-小沼王 同時也是 Grok Bot 時，卡片會同時顯示「佔團隊用量」與 OpenAI 獨立額度。全部無效或沒提供 `codex` 時，
   沿用目前 `data/usage.json` 裡的 codex 資料（不會被只有團隊資料的更新洗掉），從沒有過則顯示尚未接上。
 - `shares` 的名稱會自動對應到 `js/config.js` 的 Agent（名稱開頭比對，忽略空白與 emoji）；`"<1"` 視為 0.5
 - 對不到的名稱會在 stderr 警告並記在 `unmapped_shares`；可在腳本的 `ALIASES` 加別名
