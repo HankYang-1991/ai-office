@@ -17,7 +17,7 @@
     <button data-act="break">☕ 休息一下</button>
     <button data-act="pause">⏸ 暫停</button>
     <button data-act="labels">🏷 名牌</button>
-    <button data-act="reload">↻ 重讀額度</button>
+    <button data-act="reload">↻ 重新讀取</button>
     <button data-act="zoom" class="narrow-only">🔍 放大地圖</button>
   </div>
   <div class="datasrc" id="dataSrc">額度資料載入中…</div>
@@ -47,16 +47,13 @@
       <ul id="agentList"></ul>
     </section>
     <section class="panel chat">
-      <div class="panel-head"><h2>全員群聊</h2><span class="badge demo">示範對話</span></div>
+      <div class="panel-head"><h2>全員群聊</h2><span class="badge live">真實對話</span><span class="muted" id="chatUpdated"></span></div>
       <div id="chatLog" class="chat-log" aria-live="polite"></div>
-      <form id="chatForm" class="chat-form">
-        <input id="chatInput" placeholder="輸入訊息給全員，或 @名字 點名…" autocomplete="off" enterkeyhint="send">
-        <button type="submit">送出</button>
-      </form>
+      <div class="chat-foot">🔒 唯讀：群聊由 Hank 在 Grok Bot 發話，夥伴的真實回覆會自動顯示在這裡（每 30 秒更新）</div>
     </section>
   </aside>
 </main>
-<footer>AI 辦公室 · 額度每小時由 Grok Bot 用量報告更新（<a href="data/usage.json">usage.json</a>）· 群聊仍為<b>示範對話</b> · 時間以台北時間顯示</footer>
+<footer>AI 辦公室 · 額度每小時由 Grok Bot 用量報告更新（<a href="data/usage.json">usage.json</a>）· 群聊為<b>真實對話紀錄</b>（<a href="data/chat.json">chat.json</a>）· 時間以台北時間顯示</footer>
 
 <script src="js/config.js"></script>
 <script src="js/usage-demo.js"></script>

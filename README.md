@@ -1,7 +1,7 @@
 # AI 辦公室
 
 像素風 AI 辦公室：每位 AI Agent 是一個會在辦公室走動的小角色，下方顯示狀態與額度，右側是 Agent 列表與全員群聊。
-**額度是真實用量**（每小時由 Grok Bot 用量報告更新）；群聊回覆目前仍是示範對話。
+**額度是真實用量**（定時由 Grok Bot 用量報告更新）；**全員群聊顯示真實 AI 夥伴的對話紀錄**（唯讀）。
 
 線上版：https://hankyang-1991.github.io/ai-office/
 
@@ -62,6 +62,42 @@ python3 scripts/publish_usage.py report.json --no-push   # 只寫檔，不 commi
 - 對不到的名稱會在 stderr 警告並記在 `unmapped_shares`；可在腳本的 `ALIASES` 加別名
 - 只有時間戳不同時不會 commit；失敗時 exit code 非 0
 
+## 全員群聊（真實對話，唯讀）
+- 網站是公開的靜態頁面，所以群聊**不能在網頁上輸入**（避免陌生人叫 AI 做事、消耗額度）。
+- 流程：Hank 在 Grok Bot 對澳洲企鵝說「群聊：…」或「@大主人 …」→ 澳洲企鵝把訊息轉給被點名的夥伴（沒點名就是全員）
+  → 收齊真實回覆 → 執行 `scripts/publish_chat.py` 寫進 `data/chat.json` 並 push → Pages 部署後網站每 30 秒自動讀取。
+- 網頁會依「輪」顯示：第 N 輪標題、Hank 的發言、各夥伴回覆（頭像、名稱、台北時間）、「✓ 討論完成」；
+  進行中的輪顯示「夥伴回覆中…」。新回覆出現時，角色頭上會冒出對話泡泡。超過 400 字的回覆可「展開全文」。
+- 問全員一次，每位夥伴都會各用一點額度。
+- 任何 Agent 都能讀：`curl -s https://hankyang-1991.github.io/ai-office/data/chat.json`（格式見 `data/chat.schema.json`）
+
+### 發布群聊（scripts/publish_chat.py）
+```bash
+export AI_OFFICE_GITHUB_TOKEN=...      # 同 publish_usage.py
+# 建議：一整輪一次寫入（只產生一個 commit）
+python3 scripts/publish_chat.py apply --file round.json
+# 也可以分步驟
+python3 scripts/publish_chat.py new-round --title "週會" --user "大家這週進度？"   # stdout 印出 round id，例如 r5
+python3 scripts/publish_chat.py add --round r5 --from "大主人-電機專案經理" --text "..."
+python3 scripts/publish_chat.py add --round r5 --from "codex -小沼王" --text - < reply.txt   # - = stdin
+python3 scripts/publish_chat.py add --round r5 --from grok-bot --text-file reply.txt
+python3 scripts/publish_chat.py close --round r5
+python3 scripts/publish_chat.py note --text "系統公告"        # 單獨一則系統訊息（自成一輪）
+# 每個子命令都可加 --dry-run（只印出）或 --no-push（只寫檔）
+```
+`round.json`（單一輪；也接受 `{"rounds":[...]}` 一次多輪）：
+```json
+{"title": "自我介紹", "done": true,
+ "messages": [
+   {"from": "user", "text": "請大家用一句話自我介紹"},
+   {"from": "大主人-電機專案經理", "text": "我負責電機專案的時程與協調。", "at": "2026-11-04T16:41:00+08:00"},
+   {"from": "system", "text": "小主人目前離線"}]}
+```
+- `from`：`user`／`Hank`、`system`、agent id，或夥伴顯示名稱（例如 `codex -小沼王`、`澳洲企鵝🐧-AI 辦公室城市設計師`、`Grok Bot`），
+  用 `publish_usage.py` 同一套開頭比對（忽略空白與 emoji，可加 `ALIASES`）；對不到時整個指令失敗、不寫檔。
+- 選填 `"round": "r5"` 會把訊息附加到既有的那一輪；`at` 沒給用現在時間；`done` 預設 `true`。
+- 只保留最近 50 輪；commit 訊息為 `chat: …`；push 被拒時會自動 `pull --rebase` 再推一次。
+
 ## 執行
 純靜態網站，不需要 build，也不使用外部 CDN。在儲存庫根目錄：
 
@@ -80,12 +116,15 @@ python3 -m http.server 8765
 |---|---|
 | `index.html` | 頁面骨架 |
 | `css/style.css` | 版面（含 RWD） |
-| `js/config.js` | **資料驅動設定**：房間、門、家具、會議座位、休息點、Agent（顏色、造型、座位、行為權重、自介、示範回覆） |
+| `js/config.js` | **資料驅動設定**：房間、門、家具、會議座位、休息點、Agent（顏色、造型、座位、行為權重、自介） |
 | `js/sprites.js` | 程序化像素角色（human / blob / robot / penguin + 配件），不使用外部圖檔 |
 | `js/office.js` | 引擎：格子地圖、BFS 尋路、碰撞避讓、狀態機（工作中/開會中/閒置/移動中）、Canvas 繪製 |
 | `js/app.js` | UI：額度卡片、Agent 列表、群聊、popover、工具列，並提供 `window.AIOffice` API |
 | `data/usage.json` | **共用額度資料**（所有 Agent 讀寫同一份） |
 | `data/usage.schema.json` | usage.json 的 JSON Schema |
+| `data/chat.json` | **全員群聊真實紀錄**（由 `scripts/publish_chat.py` 發布，最近 50 輪） |
+| `data/chat.schema.json` | chat.json 的 JSON Schema |
+| `scripts/publish_usage.py` / `scripts/publish_chat.py` | 發布額度 / 群聊並 push |
 | `js/usage-demo.js` | 讀不到 usage.json 時的內建示範資料（由 usage.json 產生） |
 
 ## 共用額度資料格式（usage.json）
@@ -125,6 +164,6 @@ AIOffice.usage.all()                  // 全部資料
 AIOffice.usage.load()                 // 立即重新讀取 usage.json
 AIOffice.setState('da-zhuren', 'meeting')   // working | meeting | idle
 AIOffice.say('au-penguin', '開工！', 3000)  // 頭上對話泡泡
-AIOffice.postChat('grok-bot', '真實回覆…')  // 在群聊插入訊息
+AIOffice.reloadChat()                 // 立即重新讀取 chat.json（群聊唯讀，內容只來自 chat.json）
 AIOffice.select('codex-xiao-zhaowang')      // 選取並顯示詳細資訊
 ```

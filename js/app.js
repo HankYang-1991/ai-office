@@ -134,12 +134,12 @@
           <div class="usage"></div>
         </div>
       </button>`).join('');
-    $('#agentList').innerHTML = `<li class="al-item group" data-group="1"><span class="al-group">群</span><div><b>全員群聊</b><small>${C.agents.length} 位成員 · 輪流討論</small></div></li>` +
+    $('#agentList').innerHTML = `<li class="al-item group" data-group="1"><span class="al-group">群</span><div><b>全員群聊</b><small>${C.agents.length} 位成員 · 真實對話</small></div></li>` +
       C.agents.map(a => `<li class="al-item" data-id="${a.id}" tabindex="0"><img src="${S.avatar(a, 2)}" alt=""><div><b>${esc(a.name)}</b><small>${esc(a.role)}</small></div><span class="dot"></span></li>`).join('');
     $('#cards').addEventListener('click', e => { const c = e.target.closest('.card'); if (c) O.select(c.dataset.id); });
     $('#agentList').addEventListener('click', e => {
       const li = e.target.closest('.al-item'); if (!li) return;
-      if (li.dataset.group) { $('#chatInput').focus(); $('.chat').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return; }
+      if (li.dataset.group) { toChat(); return; }
       O.select(li.dataset.id);
     });
     $('#agentCount').textContent = `Agents: ${C.agents.length}`;
@@ -171,7 +171,7 @@
       <div class="pv-sec">額度 ${Usage.data && Usage.data.is_demo ? '<span class="tag-demo">示範資料</span>' : '<span class="tag-live">真實用量</span>'}</div>
       <div class="pv-usage">${usageHTML(a.id, true)}</div>
       <div class="pv-actions">
-        <button data-pv="mention">@ 點名發言</button>
+        <button data-pv="chat">💬 看群聊</button>
         <button data-pv="working">回座工作</button>
         <button data-pv="meeting">去開會</button>
         <button data-pv="idle">去休息</button>
@@ -198,56 +198,95 @@
     if (e.target.closest('.pv-close')) return O.select(null);
     const b = e.target.closest('[data-pv]'); if (!b) return;
     const act = b.dataset.pv;
-    if (act === 'mention') { const inp = $('#chatInput'); inp.value = '@' + cfgById[openId].short + ' '; O.select(null); inp.focus(); $('.chat').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    if (act === 'chat') { O.select(null); toChat(); }
     else O.setState(openId, act, act === 'working' ? 30 : 20);
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') O.select(null); });
 
-  // ---------- 全員群聊（示範） ----------
+  // ---------- 全員群聊（真實紀錄，唯讀） ----------
+  // Hank 在 Grok Bot 發話，澳洲企鵝把夥伴的真實回覆寫進 data/chat.json；這裡只負責顯示。
   const log = $('#chatLog');
-  let round = 0, queue = Promise.resolve();
-  function addMsg(from, text, extra) {
-    const el = document.createElement('div');
-    if (from === 'system') { el.className = 'msg system'; el.innerHTML = text; }
-    else if (from === 'user') { el.className = 'msg user'; el.innerHTML = `<div class="who">你（Hank）</div><div class="bubble">${esc(text)}</div>`; }
-    else {
-      const a = cfgById[from];
-      el.className = 'msg agent'; el.style.setProperty('--c', a.color);
-      el.innerHTML = `<img src="${S.avatar(a, 2)}" alt=""><div><div class="who">${esc(a.name)} ${extra || ''}</div><div class="bubble">${esc(text)}</div></div>`;
+  const chatUrl = C.chatUrl || 'data/chat.json';
+  const LONG = 400;
+  const Chat = { data: null, sig: '', seen: null, expanded: new Set(), error: '' };
+  const fmtMsgT = iso => { const d = new Date(iso); return isNaN(d) ? '' : fmtDT.format(d); };
+  const textHTML = t => esc(t).replace(/\n/g, '<br>');
+  function bubbleHTML(key, text) {
+    const t = String(text || '');
+    if (t.length <= LONG) return `<div class="bubble">${textHTML(t)}</div>`;
+    const open = Chat.expanded.has(key);
+    return `<div class="bubble long${open ? ' open' : ''}" data-key="${esc(key)}">${textHTML(t)}</div><button class="more" data-key="${esc(key)}">${open ? '收合' : '展開全文'}（${t.length} 字）</button>`;
+  }
+  function unknownAvatar(name) {
+    return `<span class="av-unk">${esc((name || '?').trim().charAt(0) || '?')}</span>`;
+  }
+  function msgHTML(m, key) {
+    const at = m.at ? `<span class="at">${fmtMsgT(m.at)}</span>` : '';
+    if (m.from === 'system') return `<div class="msg system"><div class="note sys">${textHTML(m.text)} ${at}</div></div>`;
+    if (m.from === 'user') return `<div class="msg user"><div class="who">Hank ${at}</div>${bubbleHTML(key, m.text)}</div>`;
+    const a = cfgById[m.from];
+    const name = a ? a.name : (m.name || m.from || '未知夥伴');
+    const color = a ? a.color : '#8a93b8';
+    const img = a ? `<img src="${S.avatar(a, 2)}" alt="">` : unknownAvatar(name);
+    return `<div class="msg agent" style="--c:${color}">${img}<div class="m-body"><div class="who">${esc(name)} ${at}</div>${bubbleHTML(key, m.text)}</div></div>`;
+  }
+  function roundHTML(r, i) {
+    const n = /^r(\d+)$/.test(r.id || '') ? r.id.slice(1) : i + 1;
+    const msgs = Array.isArray(r.messages) ? r.messages : [];
+    let h = `<div class="msg system"><div class="round">第 ${esc(n)} 輪 · ${esc(r.title || '群聊')} <span class="tag-live">真實</span>${r.started_at ? ` <span class="at">${fmtMsgT(r.started_at)}</span>` : ''}</div></div>`;
+    h += msgs.map((m, j) => msgHTML(m || {}, `${r.id}:${j}`)).join('');
+    const ids = [...new Set(msgs.map(m => m && m.from).filter(f => f && f !== 'user' && f !== 'system'))];
+    if (r.done) {
+      if (ids.length) h += `<div class="msg system"><div class="done">✓ 討論完成<div class="chips">${ids.map(id => `<span>✓ ${esc(cfgById[id] ? cfgById[id].short : id)} 已回覆</span>`).join('')}</div></div></div>`;
+    } else h += `<div class="msg system"><div class="typing">夥伴回覆中…（每 30 秒自動更新）</div></div>`;
+    return h;
+  }
+  function renderChat() {
+    const rounds = Chat.data && Array.isArray(Chat.data.rounds) ? Chat.data.rounds : [];
+    const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
+    const prevTop = log.scrollTop;
+    if (!rounds.length) log.innerHTML = `<div class="chat-empty">還沒有對話${Chat.error ? `<br><small>（讀不到 ${esc(chatUrl)}：${esc(Chat.error)}）</small>` : ''}</div>`;
+    else log.innerHTML = rounds.map(roundHTML).join('');
+    if (atBottom || !Chat.rendered) log.scrollTop = log.scrollHeight; else log.scrollTop = prevTop;
+    Chat.rendered = true;
+    const upd = Chat.data && Chat.data.updated_at;
+    $('#chatUpdated').textContent = upd ? `更新 ${fmtMsgT(upd)}` : '';
+  }
+  async function loadChat() {
+    try {
+      const r = await fetch(chatUrl + '?t=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      if (!j || !Array.isArray(j.rounds)) throw new Error('格式不符');
+      Chat.error = '';
+      const sig = JSON.stringify(j);
+      if (sig === Chat.sig && Chat.rendered) return;
+      const first = Chat.seen === null, seen = new Set();
+      const fresh = [];
+      for (const rd of j.rounds) (rd.messages || []).forEach((m, k) => {
+        const key = `${rd.id}:${k}`; seen.add(key);
+        if (!first && !Chat.seen.has(key) && m && cfgById[m.from]) fresh.push(m);
+      });
+      Chat.data = j; Chat.sig = sig; Chat.seen = seen;
+      renderChat();
+      // 新訊息：在角色頭上冒出對話泡泡
+      fresh.forEach((m, i) => setTimeout(() => {
+        const t = String(m.text).replace(/\s+/g, ' ');
+        O.say(m.from, t.length > 12 ? t.slice(0, 12) + '…' : t, 5000);
+      }, i * 1800));
+    } catch (e) {
+      Chat.error = String(e.message || e);
+      if (!Chat.rendered) renderChat();
     }
-    log.appendChild(el); log.scrollTop = log.scrollHeight; return el;
   }
-  function roundHeader(title) { round++; return addMsg('system', `<div class="round">第 ${round} 輪 · ${esc(title)} <span class="tag-demo">示範</span></div>`); }
-  function roundDone(ids) { addMsg('system', `<div class="done">✓ 討論完成<div class="chips">${ids.map(id => `<span>✓ ${esc(cfgById[id].short)} 已完成</span>`).join('')}</div></div>`); }
-  function seed() {
-    addMsg('system', '<div class="note">以下為<b>示範對話</b>：Agent 尚未接上真實 AI，回覆內容皆為預設文字。</div>');
-    roundHeader('自我介紹');
-    addMsg('user', '請大家依序自我介紹，每人一句。');
-    C.agents.forEach(a => addMsg(a.id, a.intro));
-    roundDone(C.agents.map(a => a.id));
-  }
-  async function runRound(text, ids) {
-    roundHeader(ids.length === 1 ? `點名 ${cfgById[ids[0]].short}` : '輪流回覆');
-    const short = text.length > 18 ? text.slice(0, 18) + '…' : text;
-    for (const id of ids) {
-      const a = cfgById[id];
-      const typing = addMsg('system', `<div class="typing">${esc(a.short)} 輸入中…</div>`);
-      O.say(id, '輸入中…', 1500);
-      await sleep(550 + Math.random() * 600);
-      typing.remove();
-      addMsg(id, `收到「${short}」。${a.reply}（示範回覆，尚未接上真實 AI）`);
-      O.say(id, a.reply.length > 9 ? a.reply.slice(0, 9) + '…' : a.reply, 2600);
-    }
-    roundDone(ids);
-  }
-  $('#chatForm').addEventListener('submit', e => {
-    e.preventDefault();
-    const inp = $('#chatInput'), text = inp.value.trim(); if (!text) return;
-    inp.value = ''; addMsg('user', text);
-    const mentioned = C.agents.filter(a => text.includes('@' + a.short) || text.includes('@' + a.name)).map(a => a.id);
-    const ids = mentioned.length ? mentioned : C.agents.map(a => a.id);
-    queue = queue.then(() => runRound(text, ids));
+  log.addEventListener('click', e => {
+    const b = e.target.closest('button.more'); if (!b) return;
+    const k = b.dataset.key, open = !Chat.expanded.has(k);
+    open ? Chat.expanded.add(k) : Chat.expanded.delete(k);
+    const bub = b.previousElementSibling; bub.classList.toggle('open', open);
+    b.textContent = `${open ? '收合' : '展開全文'}（${bub.textContent.length} 字）`;
   });
+  const toChat = () => $('.chat').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
   // ---------- 工具列 ----------
   $('.tools').addEventListener('click', e => {
@@ -258,7 +297,7 @@
       case 'break': O.setAll('idle', 20); break;
       case 'pause': b.textContent = O.togglePause() ? '▶ 繼續' : '⏸ 暫停'; break;
       case 'labels': b.classList.toggle('off', !O.toggleLabels()); break;
-      case 'reload': Usage.load(); break;
+      case 'reload': Usage.load(); loadChat(); break;
       case 'zoom': { const z = $('#mapWrap').classList.toggle('zoomed'); b.textContent = z ? '🔍 符合寬度' : '🔍 放大地圖'; break; }
     }
   });
@@ -266,7 +305,8 @@
   // ---------- 啟動 ----------
   buildCards();
   O.init($('#office'));
-  seed();
+  loadChat();
+  setInterval(loadChat, (C.chatPollSec || 30) * 1000);
   Usage.load();
   setInterval(() => Usage.load(), (C.usagePollSec || 60) * 1000);
   setInterval(tickStatus, 400); tickStatus();
@@ -275,6 +315,6 @@
   window.AIOffice = {
     config: C, office: O, usage: Usage,
     select: O.select, say: O.say, setState: O.setState,
-    postChat: (agentId, text) => addMsg(agentId, text),
+    chat: Chat, reloadChat: loadChat,
   };
 })();

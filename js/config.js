@@ -12,6 +12,8 @@ window.OFFICE_CONFIG = {
   speedMul: 1,
   usageUrl: 'data/usage.json',      // 共用額度資料來源（所有 Agent 讀寫同一份）
   usagePollSec: 60,                  // 每隔幾秒重新讀取一次
+  chatUrl: 'data/chat.json',        // 全員群聊真實紀錄（唯讀，由 scripts/publish_chat.py 發布）
+  chatPollSec: 30,
   timeZone: 'Asia/Taipei',
 
   // 房間：x,y,w,h 含牆；doors 為牆上的門洞

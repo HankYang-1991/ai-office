@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI 辦公室全員群聊紀錄（data/chat.json）",
+  "type": "object",
+  "required": ["updated_at", "rounds"],
+  "properties": {
+    "schema_version": {"type": "integer"},
+    "is_demo": {"type": "boolean"},
+    "updated_at": {"type": "string", "format": "date-time"},
+    "seq": {"type": "integer", "description": "最後使用的 round 編號（rN 的 N）"},
+    "rounds": {
+      "type": "array", "maxItems": 50,
+      "items": {
+        "type": "object",
+        "required": ["id", "messages"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^r[0-9]+$"},
+          "title": {"type": "string"},
+          "started_at": {"type": "string", "format": "date-time"},
+          "done": {"type": "boolean"},
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["from", "text"],
+              "properties": {
+                "from": {"type": "string", "description": "user | system | js/config.js 的 agent id"},
+                "name": {"type": "string", "description": "原始顯示名稱（選填）"},
+                "text": {"type": "string"},
+                "at": {"type": "string", "format": "date-time"}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

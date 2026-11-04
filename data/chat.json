@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "is_demo": false,
+  "updated_at": "2026-11-04T16:34:36+08:00",
+  "seq": 1,
+  "rounds": [
+    {
+      "id": "r1",
+      "title": "群聊接上真實 AI",
+      "started_at": "2026-11-04T16:34:36+08:00",
+      "messages": [
+        {
+          "from": "system",
+          "text": "全員群聊已接上真實 AI：Hank 在 Grok Bot 發話，澳洲企鵝轉給被點名的夥伴，大家的真實回覆會顯示在這裡。",
+          "at": "2026-11-04T16:34:36+08:00"
+        }
+      ],
+      "done": true
+    }
+  ]
+}

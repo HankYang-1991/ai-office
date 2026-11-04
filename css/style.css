@@ -122,6 +122,15 @@ h2{font-size:14px;margin:0;letter-spacing:.05em}
 .legend span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
 .legend i{width:8px;height:8px;display:inline-block}
 footer a{color:#8fb4ff}
+.msg .at{font-size:10px;color:#6f7899;font-weight:400;margin-left:4px}
+.msg.agent .m-body{min-width:0;flex:1}
+.msg .bubble{white-space:normal;overflow-wrap:anywhere}
+.msg .bubble.long:not(.open){max-height:9.5em;overflow:hidden;-webkit-mask-image:linear-gradient(#000 60%,transparent);mask-image:linear-gradient(#000 60%,transparent)}
+.msg button.more{background:none;border:none;color:#8fb6ff;font-size:11px;padding:4px 0;min-height:28px;cursor:pointer}
+.av-unk{width:20px;height:20px;flex:none;margin-top:14px;display:grid;place-items:center;background:#2b2f45;border:1px solid #444b70;border-radius:3px;font-size:11px;color:#c9d0e6}
+.note.sys{background:#1a2238;border-color:#34406a;color:#c9d0e6}
+.chat-empty{margin:auto;text-align:center;color:var(--muted);padding:24px 8px}
+.chat-foot{margin-top:8px;font-size:11.5px;color:var(--muted);background:#0b0e19;border:1px dashed var(--line);border-radius:4px;padding:7px 9px;line-height:1.5}
 footer{text-align:center;color:var(--muted);font-size:11px;padding:8px 12px 20px}
 
 /* 手機/窄螢幕：地圖 → 卡片 → 側欄 堆疊 */
