@@ -2,12 +2,12 @@
   "schema_version": 1,
   "is_demo": false,
   "source": "Grok Bot 用量報告（每小時更新）",
-  "generated_at": "2026-11-08T08:10:24+08:00",
+  "generated_at": "2026-11-08T10:08:58+08:00",
   "updated_by": "澳洲企鵝",
   "team": {
     "provider": "grok-bot",
     "window": "weekly",
-    "used_pct": 2.5,
+    "used_pct": 3.0,
     "limit": 100,
     "unit": "%",
     "reset_at": "2026-11-14T23:44:00+08:00"
@@ -16,7 +16,7 @@
   "entries": [
     {
       "agent_id": "team",
-      "used": 2.5,
+      "used": 3.0,
       "scope": "team",
       "note": "整個團隊共用的 Grok Bot 每週額度",
       "provider": "grok-bot",
@@ -24,7 +24,7 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-14T23:44:00+08:00",
-      "updated_at": "2026-11-08T08:10:24+08:00",
+      "updated_at": "2026-11-08T10:08:58+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
@@ -39,7 +39,7 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-14T23:44:00+08:00",
-      "updated_at": "2026-11-08T08:10:24+08:00",
+      "updated_at": "2026-11-08T10:08:58+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
@@ -54,7 +54,7 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-14T23:44:00+08:00",
-      "updated_at": "2026-11-08T08:10:24+08:00",
+      "updated_at": "2026-11-08T10:08:58+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
@@ -103,23 +103,23 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-14T23:44:00+08:00",
-      "updated_at": "2026-11-08T08:10:24+08:00",
+      "updated_at": "2026-11-08T10:08:58+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
       "agent_id": "zhaowang-xiaobao",
-      "used": 2.38,
-      "share_pct": 95.0,
-      "share_label": "95",
+      "used": 2.37,
+      "share_pct": 79.0,
+      "share_label": "79",
       "report_name": "沼王小寶-攝影師",
       "connected": true,
-      "note": "佔團隊 Grok Bot 用量 95%；used = 佔團隊每週額度的百分比",
+      "note": "佔團隊 Grok Bot 用量 79%；used = 佔團隊每週額度的百分比",
       "provider": "grok-bot",
       "window": "weekly",
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-14T23:44:00+08:00",
-      "updated_at": "2026-11-08T08:10:24+08:00",
+      "updated_at": "2026-11-08T10:08:58+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
@@ -134,39 +134,39 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-14T23:44:00+08:00",
-      "updated_at": "2026-11-08T08:10:24+08:00",
+      "updated_at": "2026-11-08T10:08:58+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
       "agent_id": "grok-bot",
-      "used": 0.07,
-      "share_pct": 3.0,
-      "share_label": "3",
+      "used": 0.42,
+      "share_pct": 14.0,
+      "share_label": "14",
       "report_name": "Grok Bot",
       "connected": true,
-      "note": "佔團隊 Grok Bot 用量 3%；used = 佔團隊每週額度的百分比",
+      "note": "佔團隊 Grok Bot 用量 14%；used = 佔團隊每週額度的百分比",
       "provider": "grok-bot",
       "window": "weekly",
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-14T23:44:00+08:00",
-      "updated_at": "2026-11-08T08:10:24+08:00",
+      "updated_at": "2026-11-08T10:08:58+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
       "agent_id": "au-penguin",
-      "used": 0.05,
-      "share_pct": 2.0,
-      "share_label": "2",
+      "used": 0.21,
+      "share_pct": 7.0,
+      "share_label": "7",
       "report_name": "澳洲企鵝🐧-AI 辦公室城市設計師",
       "connected": true,
-      "note": "佔團隊 Grok Bot 用量 2%；used = 佔團隊每週額度的百分比",
+      "note": "佔團隊 Grok Bot 用量 7%；used = 佔團隊每週額度的百分比",
       "provider": "grok-bot",
       "window": "weekly",
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-14T23:44:00+08:00",
-      "updated_at": "2026-11-08T08:10:24+08:00",
+      "updated_at": "2026-11-08T10:08:58+08:00",
       "updated_by": "澳洲企鵝"
     }
   ]
