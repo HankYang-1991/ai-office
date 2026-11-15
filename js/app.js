@@ -50,6 +50,10 @@
   function barColor(p) { return p >= 85 ? '#ff5f57' : p >= 60 ? '#f5a623' : '#4cd964'; }
   function teamEntry() { return (Usage.data && Usage.data.entries || []).find(e => e.agent_id === 'team'); }
   function realRowHTML(e, detailed) {
+    if (e.scope === 'own') {
+      const state = window.CodexState.state(e);
+      if (state !== 'fresh') return `<div class="u-row nc"><span class="tag-stale">${state === 'stale' ? '資料過期' : '尚未回報'}</span></div>`;
+    }
     if (e.connected === false || e.status === 'not_connected') {
       return `<div class="u-row nc"><div class="u-label"><span>${esc(e.provider)}</span><span class="tag-nc">尚未接上</span></div>
         <div class="u-meta">${detailed ? esc(e.note || '尚未接上額度回報') : '額度尚未接上'}</div></div>`;
@@ -59,10 +63,10 @@
         <div class="u-meta">${detailed ? esc(e.note || 'Codex 尚未回報這個時段的額度') : 'Codex 尚未回報'}</div></div>`;
     }
     if (e.scope === 'own') {
-      const p = pct(e);
+      const p = 100 - e.used;
       return `<div class="u-row">
-        <div class="u-label"><span>${esc(WIN[e.window] || e.window || '')}</span><span class="u-pct">${fmtNum(e.used)}%</span></div>
-        <div class="bar"><i style="width:${p}%;background:${barColor(p)}"></i></div>
+        <div class="u-label"><span>${esc(WIN[e.window] || ({primary: '主要額度', secondary: '次要額度'})[e.window] || e.window || '')}</span><span class="u-pct">剩餘 ${fmtNum(p)}%</span></div>
+        <div class="bar"><i style="width:${p}%;background:${barColor(e.used)}"></i></div>
         <div class="u-meta">重置 ${fmtDate(e.reset_at)}${detailed && e.reset_at ? `（${fmtLeft(e.reset_at)}）` : ''}</div>
       </div>`;
     }
@@ -78,6 +82,7 @@
     const list = Usage.get(id);
     if (!list.length) return '<div class="u-empty">尚無額度資料</div>';
     const demo = Usage.data.is_demo;
+    if (demo && id === 'codex-xiao-zhaowang') return '<div class="u-empty">Codex 未連線</div>';
     if (!demo) {
       const own = list.filter(e => e.scope === 'own' && e.connected !== false);
       let head = '';
