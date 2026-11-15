@@ -10,9 +10,9 @@
 - 每張 Agent 卡片顯示該 Agent「佔團隊用量」的比例，以及換算成團隊每週額度的百分比
   （`used = 佔比% × 團隊已用%`，例如團隊已用 22.5%、沼王小寶佔 41% → 約 9.22%）。
 - **codex-小沼王** 跑在 Hank 筆電上的 OpenAI Codex，有**自己的 OpenAI 獨立額度**（不算在團隊額度內）：
-  卡片顯示「OpenAI 獨立額度」標籤、5 小時與每週兩條額度條和重置時間（台北時間）。
+  卡片顯示「OpenAI 獨立額度」、剩餘百分比和重置時間（台北時間）；沒有提供時段名稱時顯示主要／次要額度，不猜測五小時或每週。
   Codex 把用量發布到 Crosswalk（`grokquagsire`，路徑 `ai-office/codex-usage.json`），由每小時的排程帶進來。
-  回報時間超過 24 小時會顯示「資料過舊」；從沒回報過則顯示「尚未接上」。
+  超過 24 小時、已到重置時間或時間不可信時，隱藏額度數字並顯示「資料過期」；讀取失敗／未回報時不顯示百分比。
 - 更新流程：澳洲企鵝的排程每小時取得 Grok Bot 用量報告 → 執行 `scripts/publish_usage.py` →
   內容有變才 commit + push `data/usage.json` → GitHub Actions 自動部署到 Pages（約 1 分鐘）。
 
@@ -28,7 +28,7 @@ for e in d["entries"]:
     print(e["agent_id"], e.get("share_pct"), e["used"], e.get("connected"))
 ```
 - `team`：`used_pct`（團隊每週已用 %）、`reset_at`（ISO 8601，+08:00）
-- `entries[]`：`agent_id == "team"` 是團隊總計；其他每個 Agent 一筆（codex-小沼王 另有 5h + weekly 兩筆，
+- `entries[]`：`agent_id == "team"` 是團隊總計；其他每個 Agent 一筆（codex-小沼王 另有主要與次要額度，
   `scope: "own"`、`used` = 自己 OpenAI 額度已用 %、`stale: true` = 超過 24 小時沒更新、`reported: false` = 該時段尚未回報），
   `share_pct` = 佔團隊用量 %、`used` = 佔團隊每週額度 %、`connected: false` = 尚未接上
 - GitHub Pages 有快取，最新內容通常在 push 後 1～10 分鐘內可讀到。
@@ -48,16 +48,15 @@ python3 scripts/publish_usage.py report.json --no-push   # 只寫檔，不 commi
 ```
 - 選填 `codex`（或 `--codex-file 檔案路徑`，會覆蓋輸入裡的 `codex`）：codex-小沼王 的 OpenAI Codex 用量，任何欄位都可以是 null
   ```json
-  {"agent": "codex-小沼王", "provider": "openai-codex", "plan": "Plus",
-   "primary":   {"window": "5h",     "used_pct": 12.0, "reset_at": "2026-11-03T20:10:00+08:00"},
-   "secondary": {"window": "weekly", "used_pct": 34.0, "reset_at": "2026-11-08T09:00:00+08:00"},
-   "updated_at": "2026-11-03T16:00:00+08:00", "source": "..."}
+  {"primary": {"remaining_pct": 88.0, "reset_at": "2026-11-03T20:10:00+08:00"},
+   "secondary": null, "updated_at": "2026-11-03T16:00:00+08:00"}
   ```
   每條可給 `used_pct`（0～100），或只給 `remaining_pct`（剩餘 %，會換算成 used = 100 − remaining）；`window` 沒給時
-  預設 `5h` / `weekly`。時間必須是含時區的 ISO 8601（`Z`／UTC 也可以，一律轉成台北時間 +08:00）。
-  `secondary` 為 null 時，卡片照樣顯示 5 小時額度，每週那條顯示「尚未回報」（JSON 裡 `reported: false`、`limit: null`）。
-  codex-小沼王 同時也是 Grok Bot 時，卡片會同時顯示「佔團隊用量」與 OpenAI 獨立額度。全部無效或沒提供 `codex` 時，
-  沿用目前 `data/usage.json` 裡的 codex 資料（不會被只有團隊資料的更新洗掉），從沒有過則顯示尚未接上。
+  預設 `primary` / `secondary`。時間必須是含時區的 ISO 8601（`Z`／UTC 也可以，一律轉成台北時間 +08:00）。
+  `secondary` 為 null 時，次要額度顯示「尚未回報」（`reported: false`、`limit: null`）。
+  codex-小沼王 同時也是 Grok Bot 時，卡片會同時顯示「佔團隊用量」與 OpenAI 獨立額度。未提供 `codex` 時，
+  沿用原有獨立額度；明確提供全 null 的讀取失敗快照時替換為未連線，避免繼續顯示舊數字。
+  額外的帳號、plan、source 等欄位不會輸出。收集與本機驗證方式見 [CODEX-REPAIR.md](CODEX-REPAIR.md)。
 - `shares` 的名稱會自動對應到 `js/config.js` 的 Agent（名稱開頭比對，忽略空白與 emoji）；`"<1"` 視為 0.5
 - 對不到的名稱會在 stderr 警告並記在 `unmapped_shares`；可在腳本的 `ALIASES` 加別名
 - 只有時間戳不同時不會 commit；失敗時 exit code 非 0
