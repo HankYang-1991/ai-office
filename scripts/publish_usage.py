@@ -10,8 +10,8 @@ codex-小沼王 的 OpenAI Codex 獨立額度（不算在團隊額度內）：�
    "primary":{"window":"5h","used_pct":12.0,"reset_at":"...+08:00"},
    "secondary":{"window":"weekly","used_pct":34.0,"reset_at":"...+08:00"},
    "updated_at":"...+08:00","source":"..."}
-  每個時段可給 used_pct，或給 remaining_pct（used = 100 - remaining）；window 沒給時預設 5h / weekly；
-  時間可用 Z（UTC）或 +08:00，一律轉成台北時間。secondary 為 null 時網站顯示「每週 尚未回報」。
+  每個時段可給 used_pct，或給 remaining_pct（used = 100 - remaining）；window 沒給時使用主要／次要標籤；
+  時間可用 Z（UTC）或 +08:00，一律轉成台北時間。secondary 為 null 時網站顯示「尚未回報」。
   沒提供時沿用目前 data/usage.json 裡的 codex 資料（沒有則顯示尚未接上）。
 選項：--no-push 只寫檔不 commit/push；--dry-run 只印出結果不寫檔。
 推送需要環境變數 AI_OFFICE_GITHUB_TOKEN（GitHub fine-grained token，ai-office repo Contents: write）。
@@ -100,22 +100,20 @@ def valid_pct(v):
 
 def is_stale(updated_at, now):
     t = parse_time(updated_at)
-    return t is None or (now - t).total_seconds() > STALE_HOURS * 3600
+    return t is None or (now - t).total_seconds() > STALE_HOURS * 3600 or (t - now).total_seconds() > 60
 
 
 def codex_entries(obj, now):
-    """把 Codex 用量物件轉成 entries；資料完全無效時回傳 None。"""
+    """只允許百分比、時間與固定標籤；明確失敗會替換舊額度。"""
     if not isinstance(obj, dict):
         print("警告：codex 資料不是物件，略過", file=sys.stderr)
         return None
     upd_t = parse_time(obj.get("updated_at"))
     upd = upd_t.astimezone(TZ).replace(microsecond=0).isoformat() if upd_t else None
-    prov = obj.get("provider") if isinstance(obj.get("provider"), str) and obj.get("provider").strip() else "openai-codex"
-    plan = obj.get("plan") if isinstance(obj.get("plan"), str) else None
-    src = obj.get("source") if isinstance(obj.get("source"), str) else None
+    prov = "openai-codex"
     stale = is_stale(upd, now)
     out, got = [], 0
-    for key, default_win in (("primary", "5h"), ("secondary", "weekly")):
+    for key, default_win in (("primary", "primary"), ("secondary", "secondary")):
         w = obj.get(key)
         w = w if isinstance(w, dict) else {}
         used = valid_pct(w.get("used_pct")) if w.get("used_pct") is not None else None
@@ -127,33 +125,29 @@ def codex_entries(obj, now):
                 print(f"警告：codex.{key}.remaining_pct 無效（{w.get('remaining_pct')!r}），略過", file=sys.stderr)
             else:
                 used = round(min(100.0, max(0.0, 100 - rem)), 2)
-        win = w.get("window") if isinstance(w.get("window"), str) and w.get("window").strip() else default_win
+        win = w.get("window") if w.get("window") in ("5h", "daily", "weekly", "monthly") else default_win
         rt = parse_time(w.get("reset_at"))
         e = dict(agent_id=CODEX_ID, provider=prov, window=win.strip(), used=used if used is not None else 0,
                  limit=100 if used is not None else None, unit="%",
                  reset_at=rt.astimezone(TZ).replace(microsecond=0).isoformat() if rt else None,
-                 updated_at=upd or now.isoformat(), updated_by=CODEX_NAME, connected=True,
+                 updated_at=upd or "", updated_by=CODEX_NAME, connected=used is not None,
                  scope="own", stale=stale, slot=key, reported=used is not None,
                  note="OpenAI Codex 獨立額度（不算在團隊額度內）" if used is not None else "Codex 尚未回報這個時段的額度")
         if used is not None:
             got += 1
-        if plan:
-            e["plan"] = plan
-        if src:
-            e["source"] = src[:200]
         if not upd:
             e["updated_at_unknown"] = True
         out.append(e)
     if not got:
-        print("警告：codex 資料沒有有效的 used_pct / remaining_pct，略過", file=sys.stderr)
-        return None
+        print("Codex 無可用額度：輸出未連線狀態，不沿用舊數字", file=sys.stderr)
+        return out
     return out
 
 
 def previous_codex(old, now):
     if not isinstance(old, dict):
         return None
-    prev = [e for e in old.get("entries", []) if isinstance(e, dict) and e.get("agent_id") == CODEX_ID and e.get("connected")]
+    prev = [e.copy() for e in old.get("entries", []) if isinstance(e, dict) and e.get("agent_id") == CODEX_ID and e.get("scope") == "own"]
     for e in prev:
         e["stale"] = True if e.get("updated_at_unknown") else is_stale(e.get("updated_at"), now)
     return prev or None

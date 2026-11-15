@@ -29,10 +29,21 @@ jobs:
         with:
           enablement: true
 
+      - name: Prepare artifact readiness check
+        run: npm install --prefix "$RUNNER_TEMP/pages-metadata" --ignore-scripts --no-audit --no-fund @actions/artifact@2.1.8
+
       - name: Upload artifact
+        id: upload
         uses: actions/upload-pages-artifact@v3
         with:
           path: .
+
+      - name: Wait for this upload to become visible
+        timeout-minutes: 2
+        env:
+          PAGES_METADATA_SDK: ${{ runner.temp }}/pages-metadata
+          PAGES_ARTIFACT_ID: ${{ steps.upload.outputs.artifact_id }}
+        run: node scripts/wait-pages-artifact.cjs
 
       - name: Deploy to GitHub Pages
         id: deployment
