@@ -6,6 +6,8 @@ import {mkdtempSync, readFileSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import vm from 'node:vm';
+import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 import {sanitize, collect} from './codex-usage.mjs';
 import readiness from './wait-pages-artifact.cjs';
 import '../js/codex-state.js';
@@ -83,4 +85,31 @@ test('artifact readiness stops on missing, wrong, duplicate or API error',async(
     [{name:'github-pages',id:123,size:5},{name:'github-pages',id:124,size:5}]])
     await assert.rejects(readiness.waitForArtifact({listArtifacts:async()=>({artifacts})},'123'));
   await assert.rejects(readiness.waitForArtifact({listArtifacts:async()=>{throw Error('denied')}},'123'),/denied/);
+});
+test('action entrypoint safely rejects shell environment before loading SDK',()=>{
+  const env={...process.env};
+  delete env.ACTIONS_RUNTIME_TOKEN; delete env.ACTIONS_RESULTS_URL;
+  const result=spawnSync(process.execPath,[fileURLToPath(new URL('../.github/actions/wait-pages-artifact/index.cjs',import.meta.url))],{env,encoding:'utf8'});
+  assert.equal(result.status,1);
+  assert.match(result.stderr,/RUNTIME_ENV_MISSING/);
+  assert.ok(!result.stderr.includes('Error:'));
+});
+test('action runner loads SDK and succeeds with injected runtime',async()=>{
+  let queried=false;
+  const code=await readiness.run({env:{ACTIONS_RUNTIME_TOKEN:'private-test-token',ACTIONS_RESULTS_URL:'https://example.invalid',
+    PAGES_METADATA_SDK:tmpdir(),PAGES_ARTIFACT_ID:'123'},
+    load:()=>({DefaultArtifactClient:class {async listArtifacts(){queried=true;return {artifacts:[{name:'github-pages',id:123,size:5}]};}}}),
+    info:()=>{},error:()=>assert.fail('unexpected failure')});
+  assert.equal(code,0); assert.equal(queried,true);
+});
+test('SDK load and query errors expose only fixed safe categories',async()=>{
+  const env={ACTIONS_RUNTIME_TOKEN:'private-test-token',ACTIONS_RESULTS_URL:'https://example.invalid',PAGES_METADATA_SDK:tmpdir(),PAGES_ARTIFACT_ID:'123'};
+  for(const [stage,load] of [
+    ['SDK_LOAD_FAILED',()=>{throw Error('private-test-token')}],
+    ['ARTIFACT_QUERY_FAILED',()=>({DefaultArtifactClient:class {async listArtifacts(){throw Error('private-test-token')}}})]]){
+    const messages=[];
+    assert.equal(await readiness.run({env,load,error:m=>messages.push(m)}),1);
+    assert.ok(messages[0].includes(stage));
+    assert.ok(!messages[0].includes('private-test-token'));
+  }
 });
