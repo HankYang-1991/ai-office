@@ -1,5 +1,36 @@
 # Pages and Codex quota repair (review only)
 
+## Follow-up: execute the check as a JavaScript action
+
+Run 43718743962 on main 75ecddd uploaded artifact 14163647045 successfully but
+the readiness shell step failed in one second, not after the visibility timeout.
+The previous implementation wrongly assumed that a `run: node ...` shell step gets
+the artifact runtime environment. The official runner's NodeScriptActionHandler
+injects ACTIONS_RUNTIME_TOKEN and ACTIONS_RESULTS_URL; ScriptHandler does not.
+The artifact SDK requires both. The generic error in that run hid the precise
+exception, so the log alone cannot establish it; source inspection identifies the
+integration defect and explains the observed immediate failure.
+
+The workflow now invokes a local `runs.using: node24` JavaScript action. The runner
+supplies its own runtime credentials in that supported environment. Nothing is
+exported to other steps, persisted, or printed; no permissions or credentials are
+added. The same SDK, upload-ID check and bounded wait remain. Errors now report
+fixed categories (RUNTIME_ENV_MISSING, SDK_LOAD_FAILED, ARTIFACT_QUERY_FAILED,
+VISIBILITY_TIMEOUT, etc.), never raw exception messages or stacks.
+
+Tests cover the real local action entrypoint without runtime variables, a simulated
+successful SDK query, safe error categorization, and the existing retry cases.
+Actual runner credential injection and backend visibility still need validation in
+the newly published Actions run; local mocks do not claim to prove deployment.
+This follow-up does not change data/usage.json or any quota behavior.
+
+Official sources:
+- https://github.com/actions/runner/blob/main/src/Runner.Worker/Handlers/NodeScriptActionHandler.cs
+- https://github.com/actions/runner/blob/main/src/Runner.Worker/Handlers/ScriptHandler.cs
+- https://github.com/actions/toolkit/blob/main/packages/artifact/src/internal/shared/config.ts
+
+The following sections record the original investigation and review state.
+
 Based on main `97c1127ea980997c9af2fdeb6dde934091e18a7f`. The earlier staged
 November 3 checkout was preserved unchanged. This is a worktree of the same repo.
 No push, deployment, rerun, login change, or scheduled task was performed.

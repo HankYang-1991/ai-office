@@ -1,0 +1,5 @@
+name: Wait for Pages artifact
+description: Check this upload in the JavaScript action runtime before deployment
+runs:
+  using: node24
+  main: index.cjs
