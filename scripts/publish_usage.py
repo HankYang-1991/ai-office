@@ -264,8 +264,11 @@ def main():
     now_dt = dt.datetime.now(TZ).replace(microsecond=0)
     codex = codex_entries(codex_obj, now_dt) if codex_obj is not None else None
     codex_src = "新資料" if codex else None
-    if codex is None:
-        codex = previous_codex(old, now_dt)
+    previous = previous_codex(old, now_dt)
+    incoming_time = parse_time(codex[0]["updated_at"]) if codex else None
+    previous_time = parse_time(previous[0]["updated_at"]) if previous else None
+    if codex is None or (incoming_time and previous_time and incoming_time < previous_time):
+        codex = previous
         codex_src = "沿用上次" if codex else "尚未接上"
     data = build(report, load_agents(), codex)
     if a.dry_run:

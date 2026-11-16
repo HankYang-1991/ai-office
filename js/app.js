@@ -52,7 +52,10 @@
   function realRowHTML(e, detailed) {
     if (e.scope === 'own') {
       const state = window.CodexState.state(e);
-      if (state !== 'fresh') return `<div class="u-row nc"><span class="tag-stale">${state === 'stale' ? '資料過期' : '尚未回報'}</span></div>`;
+      if (state !== 'fresh') {
+        const label = e.slot === 'secondary' ? '次要額度' : '主要額度';
+        return `<div class="u-row nc"><div class="u-label"><span>${label}</span><span class="tag-stale">${state === 'stale' ? '資料過期' : '尚未回報'}</span></div></div>`;
+      }
     }
     if (e.connected === false || e.status === 'not_connected') {
       return `<div class="u-row nc"><div class="u-label"><span>${esc(e.provider)}</span><span class="tag-nc">尚未接上</span></div>
