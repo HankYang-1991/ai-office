@@ -72,6 +72,7 @@
     if (e.scope === 'own') {
       // Hank 的 Codex 方案只有一個額度：顯示剩餘 % 與重置時間；資料過期或沒回報時不顯示數字
       const state = window.CodexState.state(e);
+      if (state === 'unavailable') return '';   // 沒回報的空格子不顯示（Hank 的方案只有一個額度）
       if (state !== 'fresh') {
         return `<div class="u-row nc"><div class="u-label"><span>OpenAI 額度</span><span class="tag-stale">${state === 'stale' ? '資料過期' : '尚未回報'}</span></div>
           <div class="u-meta">${state === 'stale' ? '等小沼王下次回報' : 'Codex 尚未回報額度'}</div></div>`;
