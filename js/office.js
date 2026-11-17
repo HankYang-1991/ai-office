@@ -246,17 +246,54 @@
   });
 
   // ---------- 走路圖（大沼王畫的角色）：載入失敗就用程式繪製的像素角色 ----------
+  // 精細版 192×320（64×64 格，5 列含坐姿）；舊版 96×128（32×32 格、4 列）依圖片尺寸自動辨識。
   const sheets = {};
   const WALK = (C.assets && C.assets.walk) || {};
+  const ROW = { down: 0, left: 1, right: 2, up: 3 };
+  const SPR = 22; // 世界座標中整格的高度（格子 16px；略大於舊版 20，縮放時關閉平滑以保持銳利像素）
+
+  function inspectSheet(img) {
+    const w = img.naturalWidth, h = img.naturalHeight;
+    if (w < 96 || h < 128) return null;
+    if (w % 3 === 0) {
+      const cell = w / 3, rows = Math.floor(h / cell);
+      if (cell >= 16 && rows >= 4) {
+        const footPad = cell >= 48 ? Math.round(cell * 4 / 64) : 0;
+        return { cell, rows, footPad };
+      }
+    }
+    return { cell: 32, rows: 4, footPad: 0 };
+  }
+  // 坐姿格含桌椅與螢幕；取底部椅腳最寬的連續不透明區當角色位置，裁掉旁側的桌子以免跟辦公室書桌重疊。
+  function analyzeSit(img, cell) {
+    const c = document.createElement('canvas');
+    c.width = cell; c.height = cell;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 4 * cell, cell, cell, 0, 0, cell, cell);
+    const data = ctx.getImageData(0, 0, cell, cell).data;
+    const y0 = Math.floor(cell * 48 / 64), y1 = Math.floor(cell * 60 / 64);
+    const col = new Uint8Array(cell);
+    for (let y = y0; y < y1; y++) for (let x = 0; x < cell; x++) if (data[(y * cell + x) * 4 + 3] > 128) col[x] = 1;
+    let bestL = 0, bestR = 0;
+    for (let x = 0, s = -1; x <= cell; x++) {
+      if (x < cell && col[x]) { if (s < 0) s = x; }
+      else if (s >= 0) { if (x - s > bestR - bestL) { bestL = s; bestR = x; } s = -1; }
+    }
+    if (bestR - bestL < cell * 0.2) return { left: 0, right: cell, anchor: cell / 2 };
+    const pad = 1;
+    return { left: Math.max(0, bestL - pad), right: Math.min(cell, bestR + pad), anchor: (bestL + bestR - 1) / 2 };
+  }
   for (const a of agents) {
     const src = WALK[a.id]; if (!src) continue;
     const img = new Image(); img.decoding = 'async';
-    img.onload = () => { if (img.naturalWidth >= 96 && img.naturalHeight >= 128) sheets[a.id] = img; };
+    img.onload = () => {
+      const meta = inspectSheet(img); if (!meta) return;
+      if (meta.rows >= 5) meta.sit = analyzeSit(img, meta.cell);
+      sheets[a.id] = { img, ...meta };
+    };
     img.onerror = () => { delete sheets[a.id]; };
     img.src = src;
   }
-  const ROW = { down: 0, left: 1, right: 2, up: 3 };
-  const SPR = 20; // 走路圖在世界座標中的大小（格子 16px，角色略大一點）
 
   // ---------- 繪製 ----------
   const world = document.createElement('canvas'); world.width = WW; world.height = WH;
@@ -345,13 +382,25 @@
     }
     dctx.imageSmoothingEnabled = false;
     dctx.drawImage(world, 0, 0, canvas.width, canvas.height);
-    // 走路圖直接畫在高解析度畫布上，保留 32px 原圖細節
+    // 走路圖直接畫在高解析度畫布上；精細版 64px 格縮小繪製，舊版 32px 同樣對齊腳底
     const s = canvas.width / WW;
     for (const a of sorted) {
-      const img = sheets[a.id]; if (!img) continue;
-      const walking = a.mode === 'walk', col = walking ? 1 + (Math.floor(a.anim * 6) % 2) : 0;
-      const dx = Math.round((a.x * T + 8 - SPR / 2) * s), dy = Math.round((a.y * T + 15 - SPR) * s), size = Math.round(SPR * s);
-      dctx.drawImage(img, col * 32, (ROW[a.dir] || 0) * 32, 32, 32, dx, dy, size, size);
+      const sheet = sheets[a.id]; if (!sheet) continue;
+      const { img, cell, rows, footPad, sit } = sheet;
+      const seated = a.mode === 'stay' && a.state === 'working' && rows >= 5 && sit;
+      const walking = a.mode === 'walk';
+      const row = seated ? 4 : (ROW[a.dir] || 0);
+      const col = seated ? (Math.floor(a.anim * 2) % 3) : (walking ? 1 + (Math.floor(a.anim * 6) % 2) : 0);
+      let sx = col * cell, sy = row * cell, sw = cell, sh = cell, anchor = cell / 2, srcOffX = 0;
+      if (seated) {
+        srcOffX = sit.left; sx = col * cell + srcOffX; sw = sit.right - sit.left; anchor = sit.anchor;
+      }
+      const scale = SPR / cell;
+      const ax = a.x * T + 8, feet = a.y * T + 15;
+      const dx = Math.round((ax - (anchor - srcOffX) * scale) * s);
+      const dy = Math.round((feet - (cell - footPad) * scale) * s);
+      dctx.imageSmoothingEnabled = false;
+      dctx.drawImage(img, sx, sy, sw, sh, dx, dy, Math.round(sw * scale * s), Math.round(sh * scale * s));
     }
     overlay();
   }

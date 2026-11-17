@@ -18,7 +18,7 @@ window.OFFICE_CONFIG = {
   staleHours: 5,                     // 額度資料超過幾小時沒更新就標「資料較舊」（同步每 2 小時一次）
 
   // 角色立繪 / 頭像 / 走路圖 / 背景音樂。檔案載入失敗時會自動退回程式繪製的像素角色、隱藏音樂按鈕。
-  //   avatars:   256×256 PNG；portraits：約 512px 高 PNG；walk：96×128 走路圖（32×32 格，列：下、左、右、上；欄：站立、左腳、右腳）
+  //   avatars:   256×256 PNG；portraits：約 512px 高 PNG；walk：精細版 192×320（64×64 格；欄：站立、左腳、右腳；列：下、左、右、上、坐著打字）。舊版 96×128（32×32 格、4 列）仍可依圖片尺寸自動辨識。
   assets: (function () {
     const ids = ['da-zhuren', 'xiao-zhuren', 'codex-xiao-zhaowang', 'da-zhaowang', 'zhaowang-xiaobao', 'jiantou-xiao-zhaowang', 'grok-bot', 'au-penguin'];
     const map = kind => Object.fromEntries(ids.map(id => [id, `assets/characters/${id}-${kind}.png`]));
