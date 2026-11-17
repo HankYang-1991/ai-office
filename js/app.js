@@ -154,6 +154,103 @@
       <div class="stack" title="各 Agent 佔團隊用量">${ranked.map(x => `<i style="width:${x.e.share_pct}%;background:${x.a.color}" title="${esc(x.a.name)} ${x.e.share_pct}%"></i>`).join('')}</div>
       <div class="legend">${ranked.map(x => `<span><i style="background:${x.a.color}"></i>${esc(x.a.short)} ${x.e.share_label && String(x.e.share_label).startsWith('<') ? esc(x.e.share_label) : fmtNum(x.e.share_pct)}%</span>`).join('')}</div>`;
   }
+
+  // ---------- Claude / Gemini 訂閱用量（與團隊額度分開；檔案缺失或無效時隱藏） ----------
+  const SUB_STATUS = { 'On track': '正常' };
+  const CLAUDE_FIELDS = { plan: 'str', session_pct: 'pct', session_note: 'str', weekly_pct: 'pct', weekly_reset: 'time', claude_code_weekly_pct: 'pct', status: 'str' };
+  const GEMINI_FIELDS = { plan: 'str', current_pct: 'pct', current_reset: 'time', weekly_pct: 'pct', weekly_reset: 'time' };
+  function validSubPct(v) { return typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 100 ? v : null; }
+  function validSubIso(v) { return typeof v === 'string' && Number.isFinite(Date.parse(v)) ? v : null; }
+  function validSubStr(v) { return typeof v === 'string' && v.length > 0 && v.length <= 40 ? v : null; }
+  function sanitizeSubPlan(obj, fields) {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+    const out = {};
+    let hasPct = false;
+    for (const [k, kind] of Object.entries(fields)) {
+      if (!(k in obj) || obj[k] == null) continue;
+      let v = null;
+      if (kind === 'pct') v = validSubPct(obj[k]);
+      else if (kind === 'time') v = validSubIso(obj[k]);
+      else v = validSubStr(String(obj[k]).trim());
+      if (v == null) return null;
+      out[k] = v;
+      if (kind === 'pct') hasPct = true;
+    }
+    return hasPct ? out : null;
+  }
+  function validateSubs(j) {
+    if (!j || typeof j !== 'object' || Array.isArray(j)) return null;
+    const updated_at = validSubIso(j.updated_at);
+    if (!updated_at) return null;
+    const claude = sanitizeSubPlan(j.claude, CLAUDE_FIELDS);
+    const gemini = sanitizeSubPlan(j.gemini, GEMINI_FIELDS);
+    if (!claude && !gemini) return null;
+    return { updated_at, claude, gemini };
+  }
+  function isSubsStale(iso) { return ageH(iso) > (C.subscriptionsStaleHours || 14); }
+  function subPctRow(label, p, reset, aria) {
+    if (p == null) return '';
+    return `<div class="u-row">
+      <div class="u-label"><span>${esc(label)}</span><span class="u-pct">${fmtNum(p)}%</span></div>
+      <div class="bar" role="progressbar" aria-label="${esc(aria || label)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(p)}"><i style="width:${Math.min(100, Math.max(0, p))}%;background:${barColor(p)}"></i></div>
+      ${reset ? `<div class="u-meta">重置 ${fmtDate(reset)}（${fmtLeft(reset)}）</div>` : ''}
+    </div>`;
+  }
+  function claudeCard(c) {
+    const title = c.plan ? `Claude ${esc(c.plan)}` : 'Claude';
+    let session = '';
+    if (c.session_pct === 0 && c.session_note) {
+      session = `<div class="u-row"><div class="u-label"><span>五小時</span><span class="u-pct">下一則訊息開始計算</span></div></div>`;
+    } else if (c.session_pct != null) {
+      session = subPctRow('五小時', c.session_pct, null, 'Claude 五小時額度');
+    }
+    const status = c.status
+      ? `<div class="u-row"><div class="u-label"><span>狀態</span><span class="tag-live">${esc(SUB_STATUS[c.status] || c.status)}</span></div></div>`
+      : '';
+    const highlight = c.weekly_pct != null ? `<span class="t-pct">${fmtNum(c.weekly_pct)}%</span>` : '';
+    return `<div class="subs-card claude">
+      <div class="t-head"><b>${title}</b>${highlight}</div>
+      ${session}${subPctRow('本週', c.weekly_pct, c.weekly_reset, 'Claude 本週額度')}${subPctRow('Claude Code 本週', c.claude_code_weekly_pct, null, 'Claude Code 本週額度')}${status}
+    </div>`;
+  }
+  function geminiCard(g) {
+    const title = g.plan ? `Gemini（${esc(g.plan)}）` : 'Gemini';
+    const highlight = g.weekly_pct != null ? `<span class="t-pct">${fmtNum(g.weekly_pct)}%</span>`
+      : g.current_pct != null ? `<span class="t-pct">${fmtNum(g.current_pct)}%</span>` : '';
+    return `<div class="subs-card gemini">
+      <div class="t-head"><b>${title}</b>${highlight}</div>
+      ${subPctRow('目前', g.current_pct, g.current_reset, 'Gemini 目前額度')}${subPctRow('每週', g.weekly_pct, g.weekly_reset, 'Gemini 每週額度')}
+    </div>`;
+  }
+  function renderSubs() {
+    const wrap = $('#subsWrap'), head = $('#subsHead'), box = $('#subsUsage');
+    if (!wrap || !head || !box) return;
+    const d = Subs.data;
+    if (!d) { wrap.hidden = true; wrap.removeAttribute('aria-hidden'); box.innerHTML = ''; head.innerHTML = ''; return; }
+    wrap.hidden = false;
+    const stale = isSubsStale(d.updated_at);
+    head.innerHTML = `<b>訂閱額度</b>${stale ? '<span class="tag-stale">資料較舊</span>' : ''}<span class="subs-updated">更新於 ${fmtAge(d.updated_at)}</span>`;
+    box.innerHTML = (d.claude ? claudeCard(d.claude) : '') + (d.gemini ? geminiCard(d.gemini) : '');
+  }
+  const Subs = {
+    data: null,
+    async load() {
+      const url = C.subscriptionsUrl;
+      if (!url) { this.data = null; renderSubs(); return; }
+      try {
+        const r = await fetch(url + '?t=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const parsed = validateSubs(await r.json());
+        if (!parsed) throw new Error('invalid');
+        this.data = parsed;
+      } catch (e) {
+        // 從未讀到有效資料就隱藏；已有資料則保留上次（例如短暫 404 / 網路中斷）
+        if (!this.data) this.data = null;
+      }
+      renderSubs();
+    },
+  };
+
   function renderUsage() {
     for (const a of C.agents) { const el = document.querySelector(`.card[data-id="${a.id}"] .usage`); if (el) el.innerHTML = usageHTML(a.id); }
     renderTeam();
@@ -380,7 +477,7 @@
       case 'break': O.setAll('idle', 20); break;
       case 'pause': { const p = O.togglePause(); setBtn(b, p ? '▶' : '⏸', p ? '繼續' : '暫停', p); break; }
       case 'labels': { const on = O.toggleLabels(); b.classList.toggle('off', !on); b.setAttribute('aria-pressed', String(on)); break; }
-      case 'reload': b.classList.add('spin'); Promise.all([Usage.load(), loadChat()]).finally(() => setTimeout(() => b.classList.remove('spin'), 300)); break;
+      case 'reload': b.classList.add('spin'); Promise.all([Usage.load(), Subs.load(), loadChat()]).finally(() => setTimeout(() => b.classList.remove('spin'), 300)); break;
       case 'zoom': { const z = $('#mapWrap').classList.toggle('zoomed'); setBtn(b, '🔍', z ? '符合寬度' : '放大地圖', z); break; }
       case 'bgm': Bgm.toggle(); break;
     }
@@ -456,21 +553,22 @@
   O.init($('#office'));
   loadChat();
   Usage.load();
+  Subs.load();
   // 分頁在背景時暫停輪詢與動畫，回到前景時立刻更新一次
   setInterval(() => { if (!document.hidden) loadChat(); }, (C.chatPollSec || 30) * 1000);
-  setInterval(() => { if (!document.hidden) Usage.load(); }, (C.usagePollSec || 60) * 1000);
+  setInterval(() => { if (!document.hidden) { Usage.load(); Subs.load(); } }, (C.usagePollSec || 60) * 1000);
   let hiddenAt = 0;
   document.addEventListener('visibilitychange', () => {
     O.setActive(!document.hidden);
     if (document.hidden) { hiddenAt = Date.now(); return; }
-    if (Date.now() - hiddenAt > 20000) { loadChat(); Usage.load(); }
+    if (Date.now() - hiddenAt > 20000) { loadChat(); Usage.load(); Subs.load(); }
     tickStatus();
   });
   setInterval(tickStatus, 400); tickStatus();
 
   // 對外 API：之後接真實 Agent / 額度用
   window.AIOffice = {
-    config: C, office: O, usage: Usage,
+    config: C, office: O, usage: Usage, subscriptions: Subs,
     select: O.select, say: O.say, setState: O.setState,
     chat: Chat, reloadChat: loadChat,
   };

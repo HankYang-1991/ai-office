@@ -12,6 +12,8 @@ window.OFFICE_CONFIG = {
   speedMul: 1,
   usageUrl: 'data/usage.json',      // 共用額度資料來源（所有 Agent 讀寫同一份）
   usagePollSec: 60,                  // 每隔幾秒重新讀取一次
+  subscriptionsUrl: 'data/subscriptions.json',  // Hank 的 Claude / Gemini 訂閱用量
+  subscriptionsStaleHours: 14,       // 來源每日 12:00、21:00 更新，逾約 14 小時標「資料較舊」
   chatUrl: 'data/chat.json',        // 全員群聊真實紀錄（唯讀，由 scripts/publish_chat.py 發布）
   chatPollSec: 30,
   timeZone: 'Asia/Taipei',

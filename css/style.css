@@ -130,6 +130,15 @@ h2{font-size:14px;margin:0;letter-spacing:.05em}
 .legend{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:4px;font-size:11px;color:#c9d0e6}
 .legend span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
 .legend i{width:8px;height:8px;display:inline-block}
+.subs-wrap{margin-bottom:8px}
+.subs-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.subs-head b{font-size:14px}
+.subs-updated{margin-left:auto;font-size:10.5px;color:var(--muted);font-family:var(--mono)}
+.subs-usage{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.subs-card{background:var(--panel2);border:2px solid var(--line);border-radius:5px;padding:8px 10px;border-left-width:4px}
+.subs-card.claude{border-left-color:#d97757}
+.subs-card.gemini{border-left-color:#4a86e8}
+.subs-card .t-pct{font-size:16px}
 footer a{color:#8fb4ff}
 .msg .at{font-size:10px;color:#9aa3c0;font-weight:400;margin-left:4px}
 .msg.agent .m-body{min-width:0;flex:1}
@@ -144,6 +153,7 @@ footer{text-align:center;color:var(--muted);font-size:11px;padding:8px 12px 20px
 
 /* 手機/窄螢幕：地圖 → 卡片 → 側欄 堆疊 */
 @media (max-width:860px){
+  .subs-usage{grid-template-columns:1fr}
   .layout{grid-template-columns:1fr;padding:8px;gap:8px}
   .sidebar{position:static;max-height:none}
   .narrow-only{display:inline-block}

@@ -61,6 +61,26 @@ python3 scripts/publish_usage.py report.json --no-push   # 只寫檔，不 commi
 - 對不到的名稱會在 stderr 警告並記在 `unmapped_shares`；可在腳本的 `ALIASES` 加別名
 - 只有時間戳不同時不會 commit；失敗時 exit code 非 0
 
+
+## Hank 的 Claude / Gemini 訂閱用量
+- 頁面「團隊每週額度」下方並排兩張方案卡（窄螢幕改為上下堆疊）：**Claude Pro** 與 **Gemini（Google AI Pro）**。
+- Claude 顯示五小時／本週／Claude Code 本週百分比與狀態（`On track` → 正常）。五小時為 0% 且有說明時，顯示「下一則訊息開始計算」。
+- Gemini 顯示目前與每週百分比，以及各自的重置時間（台北時間）。
+- 來源由 Grok Bot 每日 12:00、21:00（台北時間）寫入 `/workspace/ai-office-usage/usage.json`，再由 `scripts/publish_subscriptions.py` 發布為 `data/subscriptions.json`。
+- 資料超過約 14 小時未更新會標「資料較舊」；檔案缺失或格式無效時隱藏此區塊，不影響團隊／Codex 額度列。
+- 讀取：`curl -s https://hankyang-1991.github.io/ai-office/data/subscriptions.json`
+
+### 發布訂閱用量（scripts/publish_subscriptions.py）
+```bash
+cd ai-office   # repo 根目錄
+export AI_OFFICE_GITHUB_TOKEN=...   # 同 publish_usage.py
+python3 scripts/publish_subscriptions.py
+python3 scripts/publish_subscriptions.py /workspace/ai-office-usage/usage.json --dry-run   # 只印出，不寫檔
+python3 scripts/publish_subscriptions.py /workspace/ai-office-usage/usage.json --no-push   # 只寫檔，不 commit/push
+```
+- 只接受允許的欄位：百分比 0–100、帶時區的 ISO 8601 時間（轉成台北 +08:00）、短字串 ≤40 字；其餘欄位丟棄。
+- 內容有變才 commit + push `data/subscriptions.json`；失敗時 exit code 非 0，且不會印出 token。
+
 ## 全員群聊（真實對話，唯讀）
 - 網站是公開的靜態頁面，所以群聊**不能在網頁上輸入**（避免陌生人叫 AI 做事、消耗額度）。
 - 流程：Hank 在 Grok Bot 對澳洲企鵝說「群聊：…」或「@大主人 …」→ 澳洲企鵝把訊息轉給被點名的夥伴（沒點名就是全員）
@@ -121,9 +141,10 @@ python3 -m http.server 8765
 | `js/app.js` | UI：額度卡片、Agent 列表、群聊、popover、工具列，並提供 `window.AIOffice` API |
 | `data/usage.json` | **共用額度資料**（所有 Agent 讀寫同一份） |
 | `data/usage.schema.json` | usage.json 的 JSON Schema |
+| `data/subscriptions.json` | **Hank 的 Claude / Gemini 訂閱用量**（由 `scripts/publish_subscriptions.py` 發布） |
 | `data/chat.json` | **全員群聊真實紀錄**（由 `scripts/publish_chat.py` 發布，最近 50 輪） |
 | `data/chat.schema.json` | chat.json 的 JSON Schema |
-| `scripts/publish_usage.py` / `scripts/publish_chat.py` | 發布額度 / 群聊並 push |
+| `scripts/publish_usage.py` / `scripts/publish_subscriptions.py` / `scripts/publish_chat.py` | 發布額度 / 訂閱用量 / 群聊並 push |
 | `js/usage-demo.js` | 讀不到 usage.json 時的內建示範資料（由 usage.json 產生） |
 
 ## 共用額度資料格式（usage.json）
