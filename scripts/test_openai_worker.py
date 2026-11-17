@@ -74,6 +74,15 @@ class SanitizeTests(unittest.TestCase):
 
 
 class PriceTests(unittest.TestCase):
+    def test_default_is_official_flagship(self):
+        self.assertEqual(ow.DEFAULT_MODEL, "gpt-6.2-astra")
+        p = ow.price_for("gpt-6.2-astra")
+        self.assertEqual(p, {"input": 8.00, "cached": 0.40, "output": 40.00})
+        self.assertFalse(ow.allows_reasoning_none("gpt-6.2-astra"))
+        body = ow.build_body("hi", "gpt-6.2-astra")
+        self.assertEqual(body["model"], "gpt-6.2-astra")
+        self.assertEqual(body["reasoning"]["effort"], "low")
+
     def test_known_and_snapshot(self):
         p = ow.price_for("gpt-5.4-mini")
         self.assertEqual(p["input"], 0.75)
@@ -88,6 +97,8 @@ class PriceTests(unittest.TestCase):
         self.assertEqual(cost, 0.0015)
         # 含 cached：900 uncached + 100 cached + 200 out = (675 + 7.5 + 900) / 1e6 = 0.0015825 → 6 位小數
         self.assertEqual(ow.estimate_cost_usd("gpt-5.4-mini", 1000, 200, 100), 0.001582)
+        # 旗艦 gpt-6.2-astra：1000 in + 200 out = (8*1000 + 40*200) / 1e6 = $0.016
+        self.assertEqual(ow.estimate_cost_usd("gpt-6.2-astra", 1000, 200, 0), 0.016)
 
 
 class RedactTests(unittest.TestCase):

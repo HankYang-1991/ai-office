@@ -42,6 +42,15 @@
             R(ctx, cx - 1, chest + 1, 2, 1, '#0b1c1e');
           }
           break;
+        case 'candle':
+          if (dir !== 'up') {
+            const up = '#3ecf8e', down = '#ef5350';
+            R(ctx, cx - 3, chest - 1, 1, 4, up);
+            R(ctx, cx - 3, chest, 2, 2, up);
+            R(ctx, cx + 1, chest - 1, 1, 4, down);
+            R(ctx, cx, chest + 1, 2, 2, down);
+          }
+          break;
       }
     }
   }
@@ -155,7 +164,29 @@
     return { cx: ox + 6, top: oy + 2, eyeY: oy + 5, chest: oy + 9 };
   }
 
-  const KINDS = { human, blob, robot, penguin, sparkle, knot };
+  function candle(ctx, a, ox, oy, dir, fr, walking) {
+    const body = a.color || '#1a2228', lo = shade(body, -0.25), hi = shade(body, 0.3);
+    const up = a.accent || '#3ecf8e', down = '#ef5350';
+    const f1 = walking && fr === 0 ? 1 : 0, f2 = walking && fr === 1 ? 1 : 0;
+    R(ctx, ox + 3, oy + 14 - f1, 2, 2, lo); R(ctx, ox + 7, oy + 14 - f2, 2, 2, lo);
+    R(ctx, ox + 2, oy + 8, 8, 6, body); R(ctx, ox + 3, oy + 13, 6, 1, lo);
+    R(ctx, ox + 3, oy + 2, 6, 6, body); R(ctx, ox + 2, oy + 3, 8, 4, body);
+    R(ctx, ox + 4, oy + 2, 4, 1, hi);
+    if (dir !== 'up') {
+      const ex = dir === 'left' ? -1 : dir === 'right' ? 1 : 0;
+      R(ctx, ox + 4 + ex, oy + 5, 1, 1, up); R(ctx, ox + 7 + ex, oy + 5, 1, 1, down);
+      // 胸口兩根 K 線：綠漲、紅跌
+      R(ctx, ox + 4, oy + 8, 1, 4, up);
+      R(ctx, ox + 4, oy + 9, 2, 2, up);
+      R(ctx, ox + 7, oy + 8, 1, 4, down);
+      R(ctx, ox + 6, oy + 10, 2, 2, down);
+    } else {
+      R(ctx, ox + 5, oy + 10, 2, 2, lo);
+    }
+    return { cx: ox + 6, top: oy + 2, eyeY: oy + 5, chest: oy + 9 };
+  }
+
+  const KINDS = { human, blob, robot, penguin, sparkle, knot, candle };
 
   // px,py = 角色所站格子的左上角（世界像素）
   function draw(ctx, a, px, py, o) {

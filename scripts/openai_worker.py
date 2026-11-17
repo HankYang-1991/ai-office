@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Hank 的 AI 辦公室「GPT 分析師」：在本機用 OpenAI API 做分析、摘要與工程推理，並更新公開統計。
+"""Hank 的 AI 辦公室「量化分析師」：在本機用 OpenAI API 做法報、線型、策略與交易所相關分析，並更新公開統計。
 
 用法：
   python3 scripts/openai_worker.py "任務文字"
   python3 scripts/openai_worker.py --file input.txt
   python3 scripts/openai_worker.py "任務文字" --json
-  python3 scripts/openai_worker.py "任務文字" --model gpt-5.4-mini
+  python3 scripts/openai_worker.py "任務文字" --model gpt-6.2-astra
   python3 scripts/openai_worker.py "任務文字" --publish
   python3 scripts/openai_worker.py --publish                   # 不呼叫 API，只發布目前的 data/openai.json
 
@@ -30,16 +30,17 @@ LOCAL_DIR = Path("/workspace/ai-office-openai")
 LOCAL = LOCAL_DIR / "usage-local.json"
 TZ = dt.timezone(dt.timedelta(hours=8))  # Asia/Taipei
 UPDATED_BY = "澳洲企鵝"
-DEFAULT_MODEL = "gpt-5.4-mini"
+DEFAULT_MODEL = "gpt-6.2-astra"
 DEFAULT_MONTHLY_CAP = 95.0
 API_URL = "https://api.openai.com/v1/responses"
-TIMEOUT = 90
+TIMEOUT = 180
+DEFAULT_REASONING = "low"
 MAX_STR = 40
 SYSTEM = (
-    "你是 Hank 的 AI 辦公室裡的「GPT 分析師」。"
-    "請負責分析、文件摘要與整理，以及工程推理。"
-    "用繁體中文（台灣）作答，先給結論，再補推論與必要說明。"
-    "簡單、重複的計算請交給 Gemini 計算員，你專注在分析與推理。"
+    "你是 Hank 的 AI 辦公室裡的「量化分析師」，也是 Grok Bot 成員。"
+    "請負責公司財報分析、技術線型、交易策略與回測，以及交易所串接相關的工程工作。"
+    "用繁體中文（台灣）作答，先給結論，再補推論、數據與必要說明。"
+    "請在適當處簡短註明：本回覆僅供研究與教育，不是投資建議，也不構成買賣任何金融商品的推薦。"
 )
 JSON_HINT = "請只輸出一個 JSON 物件，至少包含 result 欄位，必要時加上 notes。"
 STATUS_OK = "ok"
@@ -50,14 +51,22 @@ PUBLIC_KEYS = (
     "model", "requests_today", "spend_today_usd", "spend_month_usd",
     "monthly_cap_usd", "month_reset_at", "last_run_at", "last_status",
 )
-# 標準方案單價：美元 / 1,000,000 tokens（input、cached_input、output）
-# 查自 2026-11-18 developers.openai.com/api/docs/pricing 與各模型頁。
+# 標準方案、短上下文（≤272K）單價：美元 / 1,000,000 tokens（input、cached_input、output）
+# 查自 2026-11-18：
+#   https://developers.openai.com/api/docs/models  （現行旗艦：GPT-6.2 Astra）
+#   https://developers.openai.com/api/docs/models/gpt-6.2-astra
+#   https://developers.openai.com/api/docs/pricing
 PRICES = {
-    "gpt-5.4-mini": {"input": 0.75, "cached": 0.075, "output": 4.50},
-    "gpt-5.4-nano": {"input": 0.20, "cached": 0.02, "output": 1.25},
-    "gpt-5.4":      {"input": 2.50, "cached": 0.25, "output": 15.00},
-    "gpt-5.5":      {"input": 5.00, "cached": 0.50, "output": 30.00},
+    "gpt-6.2-astra": {"input": 8.00, "cached": 0.40, "output": 40.00},
+    "gpt-6.2-sol":   {"input": 2.00, "cached": 0.10, "output": 10.00},
+    "gpt-6-astra":   {"input": 10.00, "cached": 1.00, "output": 50.00},
+    "gpt-6.1-sol":   {"input": 2.00, "cached": 0.10, "output": 10.00},
+    "gpt-5.4-mini":  {"input": 0.75, "cached": 0.075, "output": 4.50},
+    "gpt-5.4-nano":  {"input": 0.20, "cached": 0.02, "output": 1.25},
+    "gpt-5.4":       {"input": 2.50, "cached": 0.25, "output": 15.00},
+    "gpt-5.5":       {"input": 5.00, "cached": 0.50, "output": 30.00},
 }
+REASONING_CHOICES = ("none", "low", "medium", "high", "xhigh", "max")
 
 
 class InputError(ValueError):
@@ -366,13 +375,22 @@ def publish_after_write():
     return 0
 
 
-def build_body(prompt, model, as_json=False, max_output_tokens=1024):
+def allows_reasoning_none(model):
+    """官方文件：GPT-6.2 Astra 等會拒絕 reasoning.effort=none。"""
+    name = (valid_model(model) or "").lower()
+    if "astra" in name or name.startswith("gpt-6.2"):
+        return False
+    return True
+
+
+def build_body(prompt, model, as_json=False, max_output_tokens=1024, reasoning_effort=DEFAULT_REASONING):
+    effort = (reasoning_effort or DEFAULT_REASONING).strip().lower()
     body = {
         "model": model,
         "instructions": SYSTEM + ((" " + JSON_HINT) if as_json else ""),
         "input": prompt,
         "max_output_tokens": int(max_output_tokens),
-        "reasoning": {"effort": "none"},
+        "reasoning": {"effort": effort},
     }
     if as_json:
         body["text"] = {"format": {"type": "json_object"}}
@@ -465,8 +483,8 @@ def http_post(url, body, key, opener=None):
         return None, b"", e
 
 
-def call_openai(prompt, model, key, as_json=False, opener=None, max_output_tokens=1024):
-    body = build_body(prompt, model, as_json=as_json, max_output_tokens=max_output_tokens)
+def call_openai(prompt, model, key, as_json=False, opener=None, max_output_tokens=1024, reasoning_effort=DEFAULT_REASONING):
+    body = build_body(prompt, model, as_json=as_json, max_output_tokens=max_output_tokens, reasoning_effort=reasoning_effort)
     code, raw, err = http_post(API_URL, body, key, opener=opener)
     if code == 200:
         try:
@@ -515,7 +533,9 @@ def main(argv=None, opener=None, key_fn=None):
     ap.add_argument("task", nargs="?", help="任務文字")
     ap.add_argument("--file", help="從檔案讀取任務文字")
     ap.add_argument("--json", dest="as_json", action="store_true", help="要求模型以 JSON 作答")
-    ap.add_argument("--model", default=DEFAULT_MODEL, help=f"模型（預設 {DEFAULT_MODEL}）")
+    ap.add_argument("--model", default=DEFAULT_MODEL, help=f"模型（預設 {DEFAULT_MODEL}，現行官方旗艦）")
+    ap.add_argument("--reasoning-effort", default=DEFAULT_REASONING, dest="reasoning_effort",
+                    help=f"推理強度（預設 {DEFAULT_REASONING}；gpt-6.2-astra 不接受 none）")
     ap.add_argument("--max-per-month", type=float, default=DEFAULT_MONTHLY_CAP,
                     help=f"本機每月花費硬上限，美元（預設 {DEFAULT_MONTHLY_CAP:g}；沒有每日上限）")
     ap.add_argument("--allow-unpriced", action="store_true",
@@ -532,6 +552,11 @@ def main(argv=None, opener=None, key_fn=None):
     model = valid_model(a.model)
     if not model:
         die(f"model 無效：{a.model!r}")
+    effort = (a.reasoning_effort or DEFAULT_REASONING).strip().lower()
+    if effort not in REASONING_CHOICES:
+        die(f"--reasoning-effort 必須是 {' / '.join(REASONING_CHOICES)}")
+    if effort == "none" and not allows_reasoning_none(model):
+        die(f"模型 {model} 不接受 reasoning.effort=none（官方文件寫明會拒絕），請改用 low 以上。")
 
     if a.publish and not a.task and not a.file:
         return publish_after_write()
@@ -570,7 +595,7 @@ def main(argv=None, opener=None, key_fn=None):
 
     key = (key_fn or api_key)()
     result = call_openai(prompt, model, key, as_json=a.as_json, opener=opener,
-                         max_output_tokens=a.max_output_tokens)
+                         max_output_tokens=a.max_output_tokens, reasoning_effort=effort)
     cost = result.get("cost")
     if cost is None:
         cost = 0.0 if a.allow_unpriced else 0.0

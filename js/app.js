@@ -318,7 +318,7 @@
     },
   };
 
-  // ---------- GPT 分析師 OpenAI API 花費（無每日上限；每月硬上限；檔案缺失則隱藏列） ----------
+  // ---------- 量化分析師 OpenAI API 花費（無每日上限；每月硬上限；檔案缺失則隱藏列） ----------
   function validOaiMoney(v, lo, hi) { return typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi ? v : null; }
   function validateOpenAI(j) {
     if (!j || typeof j !== 'object' || Array.isArray(j)) return null;

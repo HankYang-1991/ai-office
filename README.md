@@ -109,26 +109,26 @@ python3 scripts/publish_gemini.py
 ```
 也可以在呼叫時加上 `--publish`（本次統計有變才 commit + push）。失敗時 exit code 非 0，且不會印出 token 或 API 金鑰。
 
-## GPT 分析師（本機 worker，API 金鑰不進網站）
-- 辦公室新成員 **GPT 分析師**（`id: gpt`，電機工程部）負責分析、文件摘要與整理，以及工程推理。簡單、重複的計算仍交給 Gemini 計算員。
+## 量化分析師（本機 worker，API 金鑰不進網站）
+- 辦公室新成員 **量化分析師**（`id: gpt`，已上線後維持此 id；電機工程部；也是獨立的 Grok Bot 成員）負責公司財報、技術線型、交易策略與回測、以及交易所串接。回覆僅供研究，不是投資建議。
 - 網站是公開靜態頁，**不會呼叫 OpenAI**。API 金鑰只放在本機環境變數 `OPENAI_API_KEY`（讀取時會去掉首尾空白），不可寫進 repo、日誌或任何 JSON。
-- 使用 OpenAI API（與 ChatGPT Pro 等訂閱分開；Pro 是否附帶每月 API 點數未在此驗證）。花費依官方單價估算（來源：2026-11-18 的 [API Pricing](https://developers.openai.com/api/docs/pricing) 與各模型頁；`openai.com/api/pricing` 目前是商業方案頁）。
-- **沒有每日花費上限**，但仍會追蹤並在卡片顯示「今日 $x 花費」（沒有對日上限的進度條）。**每月硬上限預設 95 美元**（可用 `--max-per-month` 調整），以台北日曆月計算，1 日 00:00 重置。會超過上限的請求會被拒絕。
+- 使用 OpenAI API（與 ChatGPT Pro 等訂閱分開）。預設模型為現行官方旗艦 **`gpt-6.2-astra`**（[Models](https://developers.openai.com/api/docs/models)：「use GPT-6.2 Astra, our flagship model」；單價見 [GPT-6.2 Astra](https://developers.openai.com/api/docs/models/gpt-6.2-astra) 與 [API Pricing](https://developers.openai.com/api/docs/pricing)）。標準短上下文為每 100 萬 tokens：input $8、cached $0.40、output $40。推理 tokens 計入 output。卡片會顯示實際使用的模型名稱。可用 `--model` 覆寫。`openai.com/api/pricing` 目前是商業方案頁，API 單價以 developers 文件為準。
+- **沒有每日花費上限**，但仍會追蹤並在卡片顯示「今日 $x 花費」（沒有對日上限的進度條）。**每月硬上限預設 95 美元**（可用 `--max-per-month` 調整；作為約 $100 API 點數的安全上限），以台北日曆月計算，1 日 00:00 重置。會超過上限的請求會被拒絕。旗艦單價較高：在預設 `--max-output-tokens 1024` 下，單次上限大約是 output $0.041 再加少量 input（例如 300 input + 1024 output ≈ **$0.043**）；實際常更低，視推理消耗而定。預設 `--reasoning-effort low`（官方文件寫明 `gpt-6.2-astra` 會拒絕 `none`）。
 - 本機花費計數存在 `/workspace/ai-office-openai/usage-local.json`（不在 repo 內）。
 - 公開檔 `data/openai.json` 只含非敏感統計：`model`、`requests_today`、`spend_today_usd`、`spend_month_usd`、`monthly_cap_usd`、`month_reset_at`、`last_run_at`、`last_status`（`ok` / `rate_limited` / `error` / `insufficient_quota`）。不含 `daily_cap_usd`、提示或輸出。
-- 卡片額度列顯示「OpenAI API」：今日 $x 花費（無日上限條）、本月 $y / $95 進度條、重置時間，以及模型名稱。檔案缺失或無效時隱藏該列。若 `last_run_at` 在 10 分鐘內，角色會顯示為工作中。目前使用程序化 knot 造型；之後若有自繪圖再把 `gpt` 加進 `assets` ids。
+- 卡片額度列顯示「OpenAI API」：今日 $x 花費（無日上限條）、本月 $y / $95 進度條、重置時間，以及模型名稱。檔案缺失或無效時隱藏該列。若 `last_run_at` 在 10 分鐘內，角色會顯示為工作中。目前使用程序化 K 線（綠／紅）造型；之後若有自繪圖再把 `gpt` 加進 `assets` ids。
 
 ### 執行分析（scripts/openai_worker.py）
 ```bash
 cd ai-office   # repo 根目錄
 export OPENAI_API_KEY=...            # 只放在本機，不要寫進檔案或貼到聊天
-python3 scripts/openai_worker.py "請用一句話摘要：……"
+python3 scripts/openai_worker.py "請用一句話說明 RSI 高於 70 通常代表什麼（這不是投資建議）。"
 python3 scripts/openai_worker.py --file task.txt
 python3 scripts/openai_worker.py "任務" --json
-python3 scripts/openai_worker.py "任務" --model gpt-5.4-mini
+python3 scripts/openai_worker.py "任務" --model gpt-6.2-astra
 python3 scripts/openai_worker.py "任務" --max-per-month 95
 ```
-- 預設模型 `gpt-5.4-mini`。單價表沒有的模型會拒絕呼叫，除非加上 `--allow-unpriced`（此情況花費以 $0 記帳，無法用金額上限保護）。
+- 預設模型 `gpt-6.2-astra`。單價表沒有的模型會拒絕呼叫，除非加上 `--allow-unpriced`（此情況花費以 $0 記帳，無法用金額上限保護）。
 - HTTP 401／429／`insufficient_quota` 會印出清楚的繁中說明（額度不足時會提到點數可能已用完）。
 - **預設不推送**。內容有變才把統計寫入 `data/openai.json`；要發布到網站請另外執行：
 ```bash
@@ -194,19 +194,19 @@ python3 -m http.server 8765
 | `index.html` | 頁面骨架 |
 | `css/style.css` | 版面（含 RWD） |
 | `js/config.js` | **資料驅動設定**：房間、門、家具、會議座位、休息點、Agent（顏色、造型、座位、行為權重、自介） |
-| `js/sprites.js` | 程序化像素角色（human / blob / robot / penguin / sparkle / knot + 配件），不使用外部圖檔 |
+| `js/sprites.js` | 程序化像素角色（human / blob / robot / penguin / sparkle / knot / candle + 配件），不使用外部圖檔 |
 | `js/office.js` | 引擎：格子地圖、BFS 尋路、碰撞避讓、狀態機（工作中/開會中/閒置/移動中）、Canvas 繪製 |
 | `js/app.js` | UI：額度卡片、Agent 列表、群聊、popover、工具列，並提供 `window.AIOffice` API |
 | `data/usage.json` | **共用額度資料**（所有 Agent 讀寫同一份） |
 | `data/usage.schema.json` | usage.json 的 JSON Schema |
 | `data/subscriptions.json` | **Hank 的 Claude / Gemini 訂閱用量**（由 `scripts/publish_subscriptions.py` 發布） |
 | `data/gemini.json` | **Gemini 計算員 API 免費額度統計**（由 `scripts/gemini_worker.py` / `publish_gemini.py` 發布，不含提示或輸出） |
-| `data/openai.json` | **GPT 分析師 OpenAI API 花費統計**（由 `scripts/openai_worker.py` / `publish_openai.py` 發布，不含提示或輸出） |
+| `data/openai.json` | **量化分析師 OpenAI API 花費統計**（由 `scripts/openai_worker.py` / `publish_openai.py` 發布，不含提示或輸出） |
 | `data/chat.json` | **全員群聊真實紀錄**（由 `scripts/publish_chat.py` 發布，最近 50 輪） |
 | `data/chat.schema.json` | chat.json 的 JSON Schema |
 | `scripts/publish_usage.py` / `scripts/publish_subscriptions.py` / `scripts/publish_chat.py` / `scripts/publish_gemini.py` / `scripts/publish_openai.py` | 發布額度 / 訂閱用量 / 群聊 / Gemini API 統計 / OpenAI API 花費並 push |
 | `scripts/gemini_worker.py` | 本機 Gemini 計算員（金鑰不進 repo） |
-| `scripts/openai_worker.py` | 本機 GPT 分析師（金鑰不進 repo） |
+| `scripts/openai_worker.py` | 本機量化分析師（金鑰不進 repo） |
 | `js/usage-demo.js` | 讀不到 usage.json 時的內建示範資料（由 usage.json 產生） |
 
 ## 共用額度資料格式（usage.json）
