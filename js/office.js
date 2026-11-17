@@ -144,7 +144,7 @@
     for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) { if (grid[y][x] === 1) continue; drawFloor(m, x, y, floor[y][x]); }
     for (const f of C.furniture.filter(f => f.blocking === false)) drawFurniture(m, f);
     for (const s of C.meetingSeats) drawChair(m, s[0], s[1], '#8a5a44');
-    for (const a of C.agents) drawChair(m, a.seat[0], a.seat[1], S.shade(a.color, -0.2));
+    // 座位上的椅子在 render 時畫：坐姿圖已含椅子，坐著時不重複畫
     for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) if (grid[y][x] === 1) drawWall(m, x, y);
     for (const f of C.furniture.filter(f => f.blocking !== false).sort((a, b) => a.y - b.y)) drawFurniture(m, f);
   }
@@ -246,11 +246,12 @@
   });
 
   // ---------- 走路圖（大沼王畫的角色）：載入失敗就用程式繪製的像素角色 ----------
-  // 精細版 192×320（64×64 格，5 列含坐姿）；舊版 96×128（32×32 格、4 列）依圖片尺寸自動辨識。
+  // 精細版 192×320（64×64 格，5 列：下、左、右、上、坐姿僅角色+椅子）；舊版 96×128（32×32 格、4 列）依圖片尺寸自動辨識。
   const sheets = {};
   const WALK = (C.assets && C.assets.walk) || {};
   const ROW = { down: 0, left: 1, right: 2, up: 3 };
   const SPR = 22; // 世界座標中整格的高度（格子 16px；略大於舊版 20，縮放時關閉平滑以保持銳利像素）
+  const SIT_LIFT = 5; // 坐姿稍微上移，讓手臂靠在真實書桌的桌緣
 
   function inspectSheet(img) {
     const w = img.naturalWidth, h = img.naturalHeight;
@@ -264,31 +265,15 @@
     }
     return { cell: 32, rows: 4, footPad: 0 };
   }
-  // 坐姿格含桌椅與螢幕；取底部椅腳最寬的連續不透明區當角色位置，裁掉旁側的桌子以免跟辦公室書桌重疊。
-  function analyzeSit(img, cell) {
-    const c = document.createElement('canvas');
-    c.width = cell; c.height = cell;
-    const ctx = c.getContext('2d');
-    ctx.drawImage(img, 0, 4 * cell, cell, cell, 0, 0, cell, cell);
-    const data = ctx.getImageData(0, 0, cell, cell).data;
-    const y0 = Math.floor(cell * 48 / 64), y1 = Math.floor(cell * 60 / 64);
-    const col = new Uint8Array(cell);
-    for (let y = y0; y < y1; y++) for (let x = 0; x < cell; x++) if (data[(y * cell + x) * 4 + 3] > 128) col[x] = 1;
-    let bestL = 0, bestR = 0;
-    for (let x = 0, s = -1; x <= cell; x++) {
-      if (x < cell && col[x]) { if (s < 0) s = x; }
-      else if (s >= 0) { if (x - s > bestR - bestL) { bestL = s; bestR = x; } s = -1; }
-    }
-    if (bestR - bestL < cell * 0.2) return { left: 0, right: cell, anchor: cell / 2 };
-    const pad = 1;
-    return { left: Math.max(0, bestL - pad), right: Math.min(cell, bestR + pad), anchor: (bestL + bestR - 1) / 2 };
+  function isSeated(a) {
+    const sh = sheets[a.id];
+    return !!(a.mode === 'stay' && a.state === 'working' && sh && sh.rows >= 5);
   }
   for (const a of agents) {
     const src = WALK[a.id]; if (!src) continue;
     const img = new Image(); img.decoding = 'async';
     img.onload = () => {
       const meta = inspectSheet(img); if (!meta) return;
-      if (meta.rows >= 5) meta.sit = analyzeSit(img, meta.cell);
       sheets[a.id] = { img, ...meta };
     };
     img.onerror = () => { delete sheets[a.id]; };
@@ -369,6 +354,7 @@
     for (const f of C.furniture) if (f.type === 'rack') for (let i = 0; i < 6; i++) R(wctx, f.x * T + 4, f.y * T - 3 + i * 6, 1, 1, (i + blink) % 2 ? '#4cd964' : '#2f3542');
     drawDesks(wctx, now);
     drawClock(wctx, Date.now());
+    for (const a of agents) if (!isSeated(a)) drawChair(wctx, a.cfg.seat[0], a.cfg.seat[1], S.shade(a.cfg.color, -0.2));
     const sorted = agents.slice().sort((a, b) => a.y - b.y);
     for (const a of sorted) {
       if (a.id === selectedId) {
@@ -383,24 +369,21 @@
     dctx.imageSmoothingEnabled = false;
     dctx.drawImage(world, 0, 0, canvas.width, canvas.height);
     // 走路圖直接畫在高解析度畫布上；精細版 64px 格縮小繪製，舊版 32px 同樣對齊腳底
+    // 第 5 列坐姿為完整的角色+椅子（不含桌子），畫在座位上，手臂對齊書桌桌緣
     const s = canvas.width / WW;
     for (const a of sorted) {
       const sheet = sheets[a.id]; if (!sheet) continue;
-      const { img, cell, rows, footPad, sit } = sheet;
-      const seated = a.mode === 'stay' && a.state === 'working' && rows >= 5 && sit;
+      const { img, cell, rows, footPad } = sheet;
+      const seated = isSeated(a);
       const walking = a.mode === 'walk';
       const row = seated ? 4 : (ROW[a.dir] || 0);
       const col = seated ? (Math.floor(a.anim * 2) % 3) : (walking ? 1 + (Math.floor(a.anim * 6) % 2) : 0);
-      let sx = col * cell, sy = row * cell, sw = cell, sh = cell, anchor = cell / 2, srcOffX = 0;
-      if (seated) {
-        srcOffX = sit.left; sx = col * cell + srcOffX; sw = sit.right - sit.left; anchor = sit.anchor;
-      }
-      const scale = SPR / cell;
-      const ax = a.x * T + 8, feet = a.y * T + 15;
-      const dx = Math.round((ax - (anchor - srcOffX) * scale) * s);
+      const scale = SPR / cell, size = Math.round(cell * scale * s);
+      const ax = a.x * T + 8, feet = a.y * T + 15 - (seated ? SIT_LIFT : 0);
+      const dx = Math.round((ax - (cell / 2) * scale) * s);
       const dy = Math.round((feet - (cell - footPad) * scale) * s);
       dctx.imageSmoothingEnabled = false;
-      dctx.drawImage(img, sx, sy, sw, sh, dx, dy, Math.round(sw * scale * s), Math.round(sh * scale * s));
+      dctx.drawImage(img, col * cell, row * cell, cell, cell, dx, dy, size, size);
     }
     overlay();
   }

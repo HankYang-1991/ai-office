@@ -169,7 +169,7 @@ AIOffice.select('codex-xiao-zhaowang')      // 選取並顯示詳細資訊
 
 ## 角色美術與背景音樂（v1）
 
-- `assets/characters/<id>-avatar.png`（256×256 頭像）、`<id>-portrait.png`（約 512px 高立繪）、`<id>-walk.png`（精細版 192×320 走路圖，64×64 格；欄：站立、左腳、右腳；列：下、左、右、上、坐在座位上打字。舊版 96×128／32×32 格、4 列仍可用）— 角色美術：大沼王-漫畫家。立繪已壓成 256 色 PNG。
+- `assets/characters/<id>-avatar.png`（256×256 頭像）、`<id>-portrait.png`（約 512px 高立繪）、`<id>-walk.png`（精細版 192×320 走路圖，64×64 格；欄：站立、左腳、右腳；列：下、左、右、上、坐姿為角色與椅子不含桌子。舊版 96×128／32×32 格、4 列仍可用）— 角色美術：大沼王-漫畫家。立繪已壓成 256 色 PNG。
 - `assets/audio/office-bgm.ogg` / `.mp3` —《AI Office Night Shift (Loop)》，作曲：尖頭小沼王-音樂家。90 秒無縫循環。
 - 路徑在 `js/config.js` 的 `assets` 登記。任何圖片載入失敗都會自動退回程式繪製的像素角色；音樂檔不存在就不顯示音樂按鈕。
 - 背景音樂預設靜音，只有使用者按下按鈕才播放（優先用 Web Audio 無縫循環，OGG 解不開改用 MP3，再不行用 `<audio loop>`）。播放/靜音的選擇記在 localStorage；即使上次有開，重新整理也不會自動播放，只會在按鈕上提示。

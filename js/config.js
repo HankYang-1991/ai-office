@@ -18,7 +18,7 @@ window.OFFICE_CONFIG = {
   staleHours: 5,                     // 額度資料超過幾小時沒更新就標「資料較舊」（同步每 2 小時一次）
 
   // 角色立繪 / 頭像 / 走路圖 / 背景音樂。檔案載入失敗時會自動退回程式繪製的像素角色、隱藏音樂按鈕。
-  //   avatars:   256×256 PNG；portraits：約 512px 高 PNG；walk：精細版 192×320（64×64 格；欄：站立、左腳、右腳；列：下、左、右、上、坐著打字）。舊版 96×128（32×32 格、4 列）仍可依圖片尺寸自動辨識。
+  //   avatars:   256×256 PNG；portraits：約 512px 高 PNG；walk：精細版 192×320（64×64 格；欄：站立、左腳、右腳；列：下、左、右、上、坐姿為角色+椅子不含桌子）。舊版 96×128（32×32 格、4 列）仍可依圖片尺寸自動辨識。
   assets: (function () {
     const ids = ['da-zhuren', 'xiao-zhuren', 'codex-xiao-zhaowang', 'da-zhaowang', 'zhaowang-xiaobao', 'jiantou-xiao-zhaowang', 'grok-bot', 'au-penguin'];
     const map = kind => Object.fromEntries(ids.map(id => [id, `assets/characters/${id}-${kind}.png`]));
@@ -122,7 +122,7 @@ window.OFFICE_CONFIG = {
       intro: '拍照、修圖、找角度，我是攝影師沼王小寶。',
       reply: '我去拍幾張參考照片，順便修一下光線。' },
     { id: 'jiantou-xiao-zhaowang', name: '尖頭小沼王', role: '音樂家', short: '尖頭小沼王', zone: 'studio',
-      kind: 'blob', color: '#7aa8e0', accent: '#4a72b0', accessories: ['spike', 'headphones'],
+      kind: 'blob', color: '#8cdcd2', accent: '#6cc2b9', accessories: ['headphones'],
       seat: [32, 19], weights: { working: 0.55, meeting: 0.1, idle: 0.35 },
       intro: '作曲、編曲、配 BGM，尖頭小沼王在此 ♪',
       reply: '幫這件事配一段 BGM 應該會很有感覺 ♪' },

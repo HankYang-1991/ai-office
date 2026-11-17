@@ -25,7 +25,8 @@
         case 'glasses': if (dir !== 'up') { R(ctx, cx - 4 + ex, eyeY - 1, 3, 3, '#222'); R(ctx, cx + 1 + ex, eyeY - 1, 3, 3, '#222');
           R(ctx, cx - 3 + ex, eyeY, 1, 1, '#bfe6ff'); R(ctx, cx + 2 + ex, eyeY, 1, 1, '#bfe6ff'); R(ctx, cx - 1 + ex, eyeY, 2, 1, '#222'); } break;
         case 'beret': R(ctx, cx - 4, top - 1, 8, 2, '#c0392b'); R(ctx, cx - 3, top - 2, 6, 1, '#d9493a'); R(ctx, cx + 1, top - 3, 1, 1, '#c0392b'); break;
-        case 'headphones': R(ctx, cx - 5, top - 1, 10, 1, '#2d2d38'); R(ctx, cx - 6, top + 1, 2, 4, '#ff6b6b'); R(ctx, cx + 4, top + 1, 2, 4, '#ff6b6b'); break;
+        case 'headphones': // 掛在脖子上（尖頭小沼王）
+          R(ctx, cx - 6, chest - 1, 2, 3, '#2a2d3a'); R(ctx, cx + 4, chest - 1, 2, 3, '#2a2d3a'); R(ctx, cx - 4, chest - 2, 8, 1, '#1a1c28'); break;
         case 'camera': if (dir !== 'up') { R(ctx, cx - 3, chest, 6, 4, '#222'); R(ctx, cx - 1, chest + 1, 2, 2, '#7fd3ff'); R(ctx, cx + 1, chest - 1, 2, 1, '#444'); } break;
         case 'hardhat': R(ctx, cx - 4, top - 2, 8, 2, '#f4c20d'); R(ctx, cx - 5, top, 10, 1, '#d4a20d'); R(ctx, cx - 1, top - 3, 2, 1, '#f4c20d'); break;
         case 'pencil': R(ctx, cx + 4, top + 1, 1, 4, '#f1c40f'); R(ctx, cx + 4, top + 5, 1, 1, '#444'); break;
