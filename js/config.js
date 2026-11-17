@@ -4,7 +4,7 @@
  * 座標單位：格（tile），左上角為 (0,0)。
  */
 window.OFFICE_CONFIG = {
-  version: 'v0',
+  version: 'v1',
   title: 'AI 辦公室',
   tile: 16,
   cols: 42,
@@ -15,6 +15,20 @@ window.OFFICE_CONFIG = {
   chatUrl: 'data/chat.json',        // 全員群聊真實紀錄（唯讀，由 scripts/publish_chat.py 發布）
   chatPollSec: 30,
   timeZone: 'Asia/Taipei',
+  staleHours: 5,                     // 額度資料超過幾小時沒更新就標「資料較舊」（同步每 2 小時一次）
+
+  // 角色立繪 / 頭像 / 走路圖 / 背景音樂。檔案載入失敗時會自動退回程式繪製的像素角色、隱藏音樂按鈕。
+  //   avatars:   256×256 PNG；portraits：約 512px 高 PNG；walk：96×128 走路圖（32×32 格，列：下、左、右、上；欄：站立、左腳、右腳）
+  assets: (function () {
+    const ids = ['da-zhuren', 'xiao-zhuren', 'codex-xiao-zhaowang', 'da-zhaowang', 'zhaowang-xiaobao', 'jiantou-xiao-zhaowang', 'grok-bot', 'au-penguin'];
+    const map = kind => Object.fromEntries(ids.map(id => [id, `assets/characters/${id}-${kind}.png`]));
+    return {
+      avatars: map('avatar'), portraits: map('portrait'), walk: map('walk'),
+      artCredit: '大沼王-漫畫家',
+      bgm: { ogg: 'assets/audio/office-bgm.ogg', mp3: 'assets/audio/office-bgm.mp3',
+             title: 'AI Office Night Shift (Loop)', credit: '尖頭小沼王-音樂家', volume: 0.5 },
+    };
+  })(),
 
   // 房間：x,y,w,h 含牆；doors 為牆上的門洞
   rooms: [

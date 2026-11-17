@@ -9,27 +9,29 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<a class="skip" href="#cardsPanel">跳到額度與狀態</a>
 <header class="toolbar">
-  <div class="brand">🏢 AI 辦公室 <span class="ver">v0</span> <span class="count" id="agentCount"></span></div>
-  <div class="tools">
-    <button data-act="meeting">📋 召集會議</button>
-    <button data-act="work">💻 全員回座</button>
-    <button data-act="break">☕ 休息一下</button>
-    <button data-act="pause">⏸ 暫停</button>
-    <button data-act="labels">🏷 名牌</button>
-    <button data-act="reload">↻ 重新讀取</button>
-    <button data-act="zoom" class="narrow-only">🔍 放大地圖</button>
+  <div class="brand">🏢 AI 辦公室 <span class="ver">v1</span> <span class="count" id="agentCount"></span></div>
+  <div class="tools" role="toolbar" aria-label="辦公室動作">
+    <button type="button" data-act="meeting" title="所有角色到會議室">📋 <span>召集會議</span></button>
+    <button type="button" data-act="work" title="所有角色回到座位">💻 <span>全員回座</span></button>
+    <button type="button" data-act="break" title="所有角色去休息區">☕ <span>休息一下</span></button>
+    <button type="button" data-act="pause" aria-pressed="false">⏸ <span>暫停</span></button>
+    <button type="button" data-act="labels" aria-pressed="true">🏷 <span>名牌</span></button>
+    <button type="button" data-act="reload" title="重新讀取額度與群聊">↻ <span>重新讀取</span></button>
+    <button type="button" data-act="zoom" class="narrow-only" aria-pressed="false">🔍 <span>放大地圖</span></button>
+    <button type="button" data-act="bgm" id="bgmBtn" aria-pressed="false" hidden>🔇 <span>背景音樂</span></button>
   </div>
-  <div class="datasrc" id="dataSrc">額度資料載入中…</div>
+  <div class="datasrc" id="dataSrc" role="status">額度資料載入中…</div>
 </header>
 
 <main class="layout">
   <section class="stage">
     <div class="map-wrap" id="mapWrap">
-      <canvas id="office" aria-label="像素風 AI 辦公室地圖，點擊角色查看詳細資訊"></canvas>
-      <div id="popover" class="popover" hidden></div>
+      <canvas id="office" role="img" aria-label="像素風 AI 辦公室地圖：8 位 AI 夥伴在各部門走動。點角色可看詳細資訊；也可以用下方卡片選擇角色。"></canvas>
+      <div id="popover" class="popover" role="dialog" aria-modal="false" aria-labelledby="pvName" hidden></div>
     </div>
-    <section class="panel cards-panel">
+    <section class="panel cards-panel" id="cardsPanel" tabindex="-1">
       <div class="panel-head">
         <h2>Agent 狀態與額度</h2>
         <span class="badge demo" id="usageBadge">示範資料</span>
@@ -37,23 +39,25 @@
         <span class="muted" id="usageUpdated"></span>
       </div>
       <div id="teamUsage" class="team-usage" hidden></div>
+      <div id="usageAlert" class="alert" role="status" hidden></div>
       <div id="cards" class="cards"></div>
     </section>
   </section>
 
   <aside class="sidebar">
-    <section class="panel agent-list">
+    <section class="panel agent-list" aria-label="Agent 列表">
       <div class="panel-head"><h2>Agent 列表</h2></div>
       <ul id="agentList"></ul>
     </section>
-    <section class="panel chat">
+    <section class="panel chat" id="chatPanel" aria-label="全員群聊（唯讀）">
       <div class="panel-head"><h2>全員群聊</h2><span class="badge live">真實對話</span><span class="muted" id="chatUpdated"></span></div>
-      <div id="chatLog" class="chat-log" aria-live="polite"></div>
+      <div id="chatAlert" class="alert" role="status" hidden></div>
+      <div id="chatLog" class="chat-log" aria-live="polite" tabindex="0" aria-label="群聊紀錄"></div>
       <div class="chat-foot">🔒 唯讀：群聊由 Hank 在 Grok Bot 發話，夥伴的真實回覆會自動顯示在這裡（每 30 秒更新）</div>
     </section>
   </aside>
 </main>
-<footer>AI 辦公室 · 額度每小時由 Grok Bot 用量報告更新（<a href="data/usage.json">usage.json</a>）· 群聊為<b>真實對話紀錄</b>（<a href="data/chat.json">chat.json</a>）· 時間以台北時間顯示</footer>
+<footer>AI 辦公室 · 額度約每 2 小時由 Grok Bot 用量報告同步（<a href="data/usage.json">usage.json</a>），Codex 額度由小沼王自己回報 · 群聊為<b>真實對話紀錄</b>（<a href="data/chat.json">chat.json</a>）· 時間皆為台北時間<span id="artCredit" hidden></span><span id="bgmCredit" hidden></span></footer>
 
 <script src="js/config.js"></script>
 <script src="js/usage-demo.js"></script>

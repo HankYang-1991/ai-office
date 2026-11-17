@@ -245,6 +245,19 @@
     else { reserved.set(key(a.x, a.y), a.id); }
   });
 
+  // ---------- 走路圖（大沼王畫的角色）：載入失敗就用程式繪製的像素角色 ----------
+  const sheets = {};
+  const WALK = (C.assets && C.assets.walk) || {};
+  for (const a of agents) {
+    const src = WALK[a.id]; if (!src) continue;
+    const img = new Image(); img.decoding = 'async';
+    img.onload = () => { if (img.naturalWidth >= 96 && img.naturalHeight >= 128) sheets[a.id] = img; };
+    img.onerror = () => { delete sheets[a.id]; };
+    img.src = src;
+  }
+  const ROW = { down: 0, left: 1, right: 2, up: 3 };
+  const SPR = 20; // 走路圖在世界座標中的大小（格子 16px，角色略大一點）
+
   // ---------- 繪製 ----------
   const world = document.createElement('canvas'); world.width = WW; world.height = WH;
   const wctx = world.getContext('2d');
@@ -275,11 +288,50 @@
     return h;
   }
 
+  // 牆上時鐘（台北時間）
+  const clockFmt = new Intl.DateTimeFormat('en-GB', { timeZone: C.timeZone || 'Asia/Taipei', hour: 'numeric', minute: 'numeric', hour12: false });
+  const CLOCK = C.clock || [6, 1];
+  function drawClock(ctx, nowMs) {
+    const [hh, mm] = clockFmt.format(new Date(nowMs)).split(':').map(Number);
+    const cx = CLOCK[0] * T + 8, cy = CLOCK[1] * T + 10;
+    R(ctx, cx - 4, cy - 5, 9, 11, '#3b2a1a'); R(ctx, cx - 5, cy - 4, 11, 9, '#3b2a1a');
+    R(ctx, cx - 3, cy - 4, 7, 9, '#fbf6e9'); R(ctx, cx - 4, cy - 3, 9, 7, '#fbf6e9');
+    const hand = (ang, len, c) => { for (let i = 1; i <= len; i++) R(ctx, Math.round(cx + Math.sin(ang) * i), Math.round(cy - Math.cos(ang) * i), 1, 1, c); };
+    hand((mm / 60) * 2 * Math.PI, 3, '#2a2a3a');
+    hand(((hh % 12) / 12 + mm / 720) * 2 * Math.PI, 2, '#c0392b');
+    R(ctx, cx, cy, 1, 1, '#c0392b');
+  }
+  // 書桌螢幕：主人坐在座位上工作時亮起並跑程式碼，不在時變暗
+  const desks = C.furniture.filter(f => f.type === 'desk' && f.owner);
+  function drawDesks(ctx, now) {
+    for (const f of desks) {
+      const a = byId[f.owner]; if (!a) continue;
+      const atDesk = a.mode === 'stay' && a.state === 'working';
+      const px = f.x * T, py = f.y * T, cx = px + f.w * T / 2;
+      if (f.deco === 'pc' || f.deco === 'pc2') {
+        const mons = f.deco === 'pc2' ? [cx - 10, cx + 1] : [cx - 5];
+        mons.forEach((mx, k) => {
+          if (!atDesk) { R(ctx, mx + 1, py - 4, 8, 5, '#1f2a38'); return; }
+          const t = Math.floor(now / 350) + k * 3;
+          for (let i = 0; i < 3; i++) R(ctx, mx + 2, py - 4 + i * 2 - (i ? 1 : 0), 1 + ((t + i * 5) % 6), 1, i === 1 ? '#ffe08a' : '#d9f4ff');
+        });
+      } else if (atDesk) {
+        // 其他工作桌：主人在座時桌上冒出小小的工作火花
+        const b = Math.floor(now / 500) % 3;
+        const c = { drawing: '#f1c40f', camera: '#ffffff', piano: '#ffd65a', drafting: '#3d6fd8', blueprint: '#cfe3ff' }[f.deco] || '#ffd65a';
+        if (f.deco === 'piano') { R(ctx, cx + 4, py - 6 - b, 1, 4, c); R(ctx, cx + 2, py - 3 - b, 3, 2, c); }
+        else R(ctx, cx + 6, py - 2 - b, 1, 1, c);
+      }
+    }
+  }
+
   function render(now) {
     wctx.drawImage(mapCanvas, 0, 0);
     // 小動畫：機櫃燈號
     const blink = Math.floor(now / 400) % 2;
     for (const f of C.furniture) if (f.type === 'rack') for (let i = 0; i < 6; i++) R(wctx, f.x * T + 4, f.y * T - 3 + i * 6, 1, 1, (i + blink) % 2 ? '#4cd964' : '#2f3542');
+    drawDesks(wctx, now);
+    drawClock(wctx, Date.now());
     const sorted = agents.slice().sort((a, b) => a.y - b.y);
     for (const a of sorted) {
       if (a.id === selectedId) {
@@ -288,10 +340,19 @@
         wctx.fillRect(Math.round(a.x * T) + 1, Math.round(a.y * T) + 11, 14, 5);
         wctx.fillRect(Math.round(a.x * T) + 3, Math.round(a.y * T) + 10, 10, 7);
       }
-      S.draw(wctx, a.cfg, a.x * T, a.y * T, { dir: a.dir, frame: Math.floor(a.anim * 6) % 2, walking: a.mode === 'walk' });
+      if (sheets[a.id]) { wctx.fillStyle = 'rgba(0,0,0,.28)'; wctx.fillRect(Math.round(a.x * T) + 3, Math.round(a.y * T) + 13, 10, 2); wctx.fillRect(Math.round(a.x * T) + 4, Math.round(a.y * T) + 12, 8, 1); }
+      else S.draw(wctx, a.cfg, a.x * T, a.y * T, { dir: a.dir, frame: Math.floor(a.anim * 6) % 2, walking: a.mode === 'walk' });
     }
     dctx.imageSmoothingEnabled = false;
     dctx.drawImage(world, 0, 0, canvas.width, canvas.height);
+    // 走路圖直接畫在高解析度畫布上，保留 32px 原圖細節
+    const s = canvas.width / WW;
+    for (const a of sorted) {
+      const img = sheets[a.id]; if (!img) continue;
+      const walking = a.mode === 'walk', col = walking ? 1 + (Math.floor(a.anim * 6) % 2) : 0;
+      const dx = Math.round((a.x * T + 8 - SPR / 2) * s), dy = Math.round((a.y * T + 15 - SPR) * s), size = Math.round(SPR * s);
+      dctx.drawImage(img, col * 32, (ROW[a.dir] || 0) * 32, 32, 32, dx, dy, size, size);
+    }
     overlay();
   }
 
@@ -310,13 +371,23 @@
     if (paused) pill(dctx, '⏸ 已暫停', canvas.width / 2, canvas.height / 2 - fs, fs * 1.6, 'rgba(0,0,0,.7)', '#fff');
   }
 
-  let last = performance.now();
+  // 主迴圈：最多 30 fps；分頁在背景時完全停下，省電
+  let last = performance.now(), lastDraw = 0, active = true, rafId = 0;
+  const FRAME_MS = 1000 / 30;
   function loop(now) {
+    rafId = 0;
+    if (!active) return;
+    rafId = requestAnimationFrame(loop);
+    if (now - lastDraw < FRAME_MS - 2) return;
+    lastDraw = now;
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
     if (!paused) agents.forEach(a => update(a, dt));
     render(now);
     frameHooks.forEach(fn => fn());
-    requestAnimationFrame(loop);
+  }
+  function setActive(on) {
+    active = !!on;
+    if (active && !rafId && canvas) { last = performance.now(); rafId = requestAnimationFrame(loop); }
   }
 
   function resize() {
@@ -349,11 +420,11 @@
     canvas.addEventListener('pointermove', e => {
       if (e.pointerType === 'mouse') canvas.style.cursor = hitTest(e.clientX, e.clientY, false) ? 'pointer' : 'default';
     });
-    requestAnimationFrame(loop);
+    rafId = requestAnimationFrame(loop);
   }
 
   window.Office = {
-    init, agents, byId, statusOf, activityOf, STATUS,
+    init, setActive, agents, byId, statusOf, activityOf, STATUS,
     select, getSelected: () => selectedId,
     onSelect: fn => selectHooks.push(fn), onFrame: fn => frameHooks.push(fn),
     setState: (id, st, stay) => byId[id] && setState(byId[id], st, stay),

@@ -166,3 +166,11 @@ AIOffice.say('au-penguin', '開工！', 3000)  // 頭上對話泡泡
 AIOffice.reloadChat()                 // 立即重新讀取 chat.json（群聊唯讀，內容只來自 chat.json）
 AIOffice.select('codex-xiao-zhaowang')      // 選取並顯示詳細資訊
 ```
+
+## 角色美術與背景音樂（v1）
+
+- `assets/characters/<id>-avatar.png`（256×256 頭像）、`<id>-portrait.png`（約 512px 高立繪）、`<id>-walk.png`（96×128 走路圖，32×32 格；列：下、左、右、上；欄：站立、左腳、右腳）— 角色美術：大沼王-漫畫家。立繪已壓成 256 色 PNG。
+- `assets/audio/office-bgm.ogg` / `.mp3` —《AI Office Night Shift (Loop)》，作曲：尖頭小沼王-音樂家。90 秒無縫循環。
+- 路徑在 `js/config.js` 的 `assets` 登記。任何圖片載入失敗都會自動退回程式繪製的像素角色；音樂檔不存在就不顯示音樂按鈕。
+- 背景音樂預設靜音，只有使用者按下按鈕才播放（優先用 Web Audio 無縫循環，OGG 解不開改用 MP3，再不行用 `<audio loop>`）。播放/靜音的選擇記在 localStorage；即使上次有開，重新整理也不會自動播放，只會在按鈕上提示。
+- 分頁在背景時動畫與資料輪詢都會暫停；額度讀取失敗時保留上一次的真實資料並顯示提醒。
