@@ -617,72 +617,104 @@
       case 'reload': b.classList.add('spin'); Promise.all([Usage.load(), Subs.load(), Gemini.load(), OpenAI.load(), loadChat()]).finally(() => setTimeout(() => b.classList.remove('spin'), 300)); break;
       case 'zoom': { const z = $('#mapWrap').classList.toggle('zoomed'); setBtn(b, '🔍', z ? '符合寬度' : '放大地圖', z); break; }
       case 'bgm': Bgm.toggle(); break;
+      case 'bgmNext': Bgm.next(); break;
     }
   });
 
   function setBtn(b, icon, label, pressed) { b.innerHTML = `${icon} <span>${label}</span>`; b.setAttribute('aria-pressed', String(!!pressed)); }
 
-  // ---------- 背景音樂：預設靜音，使用者按了才播放；用 Web Audio 無縫循環 ----------
+  // ---------- 背景音樂：預設靜音，使用者按了才播放；用 Web Audio 無縫循環；可切換曲目 ----------
   const Bgm = (() => {
-    const cfg = ASSETS.bgm, btn = $('#bgmBtn'), credit = $('#bgmCredit'), KEY = 'aiOffice.bgm';
-    if (!cfg || !(cfg.ogg || cfg.mp3)) return { toggle() {} };
+    const cfg = ASSETS.bgm || {}, btn = $('#bgmBtn'), nextBtn = $('#bgmNextBtn'), credit = $('#bgmCredit');
+    const KEY = 'aiOffice.bgm', TKEY = 'aiOffice.bgmTrack';
+    const all = (cfg.tracks || (cfg.ogg || cfg.mp3 ? [cfg] : [])).filter(t => t.ogg || t.mp3);
+    if (!all.length) return { toggle() {}, next() {} };
     const vol = cfg.volume || 0.5;
-    const pref = () => { try { return localStorage.getItem(KEY); } catch (e) { return null; } };
-    const save = v => { try { localStorage.setItem(KEY, v); } catch (e) {} };
-    let mode = null, ctx = null, el = null, playing = false, busy = false;
+    const ls = (k, v) => { try { return v === undefined ? localStorage.getItem(k) : localStorage.setItem(k, v); } catch (e) { return null; } };
+    let tracks = [], idx = 0, ctx = null, gain = null, src = null, el = null, mode = null, playing = false, busy = false;
+    const bufs = new Map();
+    const cur = () => tracks[idx];
     const sync = (state) => {
       const map = { on: ['🔊', '音樂播放中'], off: ['🔇', '背景音樂'], load: ['⏳', '載入音樂…'], hint: ['🎵', '點我播音樂'] };
       const [ic, lb] = map[state]; setBtn(btn, ic, lb, state === 'on');
       btn.classList.toggle('hint', state === 'hint');
-      btn.title = `《${cfg.title}》· 作曲：${cfg.credit}` + (state === 'on' ? '（再按一次靜音）' : '（按一下播放，預設靜音）');
+      btn.title = `《${cur().title}》· 作曲：${cur().credit}` + (state === 'on' ? '（再按一次靜音）' : '（按一下播放，預設靜音）');
+      credit.textContent = ` · 背景音樂《${cur().title}》作曲：${cur().credit}`;
+      if (nextBtn) nextBtn.title = `換下一首（共 ${tracks.length} 首，目前第 ${idx + 1} 首）`;
     };
-    const fail = () => { playing = false; busy = false; btn.hidden = true; credit.hidden = true; };
-    async function startWebAudio() {
-      const AC = window.AudioContext || window.webkitAudioContext; if (!AC) throw new Error('no web audio');
-      ctx = new AC();
-      let buf = null;
-      for (const url of [cfg.ogg, cfg.mp3].filter(Boolean)) {
+    const fail = () => { playing = false; busy = false; btn.hidden = true; credit.hidden = true; if (nextBtn) nextBtn.hidden = true; };
+    async function loadBuf(t) {
+      if (bufs.has(t)) return bufs.get(t);
+      for (const url of [t.ogg, t.mp3].filter(Boolean)) {
         try {
           const r = await fetch(url); if (!r.ok) continue;
           const ab = await r.arrayBuffer();
-          buf = await new Promise((ok, no) => { const p = ctx.decodeAudioData(ab, ok, no); if (p && p.then) p.then(ok, no); });
-          break;
-        } catch (e) { buf = null; }   // OGG 解碼失敗（例如 Safari）就改用 MP3
+          const buf = await new Promise((ok, no) => { const p = ctx.decodeAudioData(ab, ok, no); if (p && p.then) p.then(ok, no); });
+          bufs.set(t, buf); return buf;
+        } catch (e) {}   // OGG 解碼失敗（例如 Safari）就改用 MP3
       }
-      if (!buf) { ctx.close(); ctx = null; throw new Error('decode failed'); }
-      const gain = ctx.createGain(); gain.gain.value = vol; gain.connect(ctx.destination);
-      const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(gain); src.start();
+      throw new Error('decode failed');
+    }
+    async function startWebAudio() {
+      if (!ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext; if (!AC) throw new Error('no web audio');
+        ctx = new AC(); gain = ctx.createGain(); gain.gain.value = vol; gain.connect(ctx.destination);
+      }
+      const buf = await loadBuf(cur());
+      if (src) { try { src.stop(); } catch (e) {} src.disconnect(); }
+      src = ctx.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(gain); src.start();
+      if (ctx.state === 'suspended') await ctx.resume();
       mode = 'webaudio';
     }
     function startElement() {
+      if (el) { el.pause(); el.remove(); }
       el = document.createElement('audio'); el.loop = true; el.preload = 'auto'; el.volume = vol;
-      for (const [u, t] of [[cfg.ogg, 'audio/ogg'], [cfg.mp3, 'audio/mpeg']]) if (u) { const so = document.createElement('source'); so.src = u; so.type = t; el.appendChild(so); }
+      const t = cur();
+      for (const [u, ty] of [[t.ogg, 'audio/ogg'], [t.mp3, 'audio/mpeg']]) if (u) { const so = document.createElement('source'); so.src = u; so.type = ty; el.appendChild(so); }
       mode = 'element';
       return el.play();
+    }
+    async function start() {   // 從頭播放目前曲目
+      if (mode !== 'element') { try { await startWebAudio(); return; } catch (e) { if (ctx && mode === 'webaudio') throw e; } }
+      await startElement();
     }
     async function play() {
       busy = true; sync('load');
       try {
-        if (mode === 'webaudio') await ctx.resume();
-        else if (mode === 'element') await el.play();
-        else { try { await startWebAudio(); } catch (e) { await startElement(); } }
-        playing = true; save('on'); sync('on');
+        if (mode === 'webaudio' && src) await ctx.resume();
+        else if (mode === 'element' && el) await el.play();
+        else await start();
+        playing = true; ls(KEY, 'on'); sync('on');
       } catch (e) { console.warn('[bgm] 無法播放', e); fail(); }
       busy = false;
     }
     function pause() {
       if (mode === 'webaudio') ctx.suspend(); else if (el) el.pause();
-      playing = false; save('off'); sync('off');
+      playing = false; ls(KEY, 'off'); sync('off');
     }
-    // 檔案存在才顯示按鈕與作者
-    Promise.all([cfg.ogg, cfg.mp3].filter(Boolean).map(u => fetch(u, { method: 'HEAD', cache: 'no-store' }).then(r => r.ok).catch(() => false)))
-      .then(oks => {
-        if (!oks.some(Boolean)) return fail();
-        btn.hidden = false; credit.hidden = false;
-        credit.textContent = ` · 背景音樂《${cfg.title}》作曲：${cfg.credit}`;
-        sync(pref() === 'on' ? 'hint' : 'off');   // 上次有開也不自動播放，只提示
-      });
-    return { toggle() { if (busy) return; playing ? pause() : play(); } };
+    async function next() {
+      if (busy || tracks.length < 2) return;
+      idx = (idx + 1) % tracks.length; ls(TKEY, String(all.indexOf(cur())));
+      if (!playing) {   // 沒在播：只換曲目，下次按播放就是新歌
+        if (mode === 'webaudio' && src) { try { src.stop(); } catch (e) {} src = null; }
+        if (mode === 'element' && el) { el.pause(); el.remove(); el = null; }
+        return sync('off');
+      }
+      busy = true; sync('load');
+      try { await start(); sync('on'); } catch (e) { console.warn('[bgm] 換歌失敗', e); fail(); }
+      busy = false;
+    }
+    // 檔案存在的曲目才列入；超過一首才顯示「換歌」
+    const exists = t => Promise.all([t.ogg, t.mp3].filter(Boolean).map(u => fetch(u, { method: 'HEAD', cache: 'no-store' }).then(r => r.ok).catch(() => false))).then(o => o.some(Boolean));
+    Promise.all(all.map(exists)).then(oks => {
+      tracks = all.filter((t, i) => oks[i]);
+      if (!tracks.length) return fail();
+      const saved = all[Number(ls(TKEY))]; idx = Math.max(0, tracks.indexOf(saved));
+      btn.hidden = false; credit.hidden = false;
+      if (nextBtn) nextBtn.hidden = tracks.length < 2;
+      sync(ls(KEY) === 'on' ? 'hint' : 'off');   // 上次有開也不自動播放，只提示
+    });
+    return { toggle() { if (busy) return; playing ? pause() : play(); }, next };
   })();
 
   // ---------- 啟動 ----------

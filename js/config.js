@@ -32,8 +32,13 @@ window.OFFICE_CONFIG = {
       avatars: map('avatar'), portraits: map('portrait'), walk: map('walk'),
       artCredit: '大沼王-漫畫家',
       geminiArtCredit: 'Gemini 計算員造型：Gemini 自繪',
-      bgm: { ogg: 'assets/audio/office-bgm.ogg?v=2', mp3: 'assets/audio/office-bgm.mp3?v=2',
-             title: 'Pixel Office Sunshine (Loop)', credit: '尖頭小沼王-音樂家', volume: 0.5 },
+      // 曲目清單：檔案存在才會出現；超過一首時會顯示「換歌」按鈕
+      bgm: { volume: 0.5, tracks: [
+        { ogg: 'assets/audio/office-bgm.ogg?v=2', mp3: 'assets/audio/office-bgm.mp3?v=2',
+          title: 'Pixel Office Sunshine (Loop)', credit: '尖頭小沼王-音樂家' },
+        { ogg: 'assets/audio/office-bgm-2.ogg', mp3: 'assets/audio/office-bgm-2.mp3',
+          title: '沼王的悠哉沼澤（製作中）', credit: '尖頭小沼王-音樂家' },
+      ] },
     };
   })(),
 
