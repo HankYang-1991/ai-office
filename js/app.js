@@ -109,6 +109,7 @@
       </div>`;
   }
   function usageHTML(id, detailed) {
+    if (id === 'gemini') return geminiUsageHTML(detailed);
     const list = Usage.get(id);
     if (!list.length) return '<div class="u-empty">尚無額度資料</div>';
     const demo = Usage.data.is_demo;
@@ -251,6 +252,64 @@
     },
   };
 
+
+  // ---------- Gemini 計算員 API 免費額度（與 Google AI Pro 訂閱卡分開；檔案缺失則隱藏列） ----------
+  function validGemInt(v, lo, hi) { return typeof v === 'number' && Number.isFinite(v) && v === Math.floor(v) && v >= lo && v <= hi ? v : null; }
+  function validateGemini(j) {
+    if (!j || typeof j !== 'object' || Array.isArray(j)) return null;
+    const model = typeof j.model === 'string' && /^[A-Za-z0-9._-]{1,40}$/.test(j.model) ? j.model : null;
+    const requests_today = validGemInt(j.requests_today, 0, 100000);
+    const daily_cap = validGemInt(j.daily_cap, 1, 100000);
+    const day_reset_at = validSubIso(j.day_reset_at);
+    const last_run_at = validSubIso(j.last_run_at);
+    const last_status = j.last_status === 'ok' || j.last_status === 'rate_limited' || j.last_status === 'error' ? j.last_status : null;
+    if (!model || requests_today == null || daily_cap == null || !day_reset_at || !last_run_at || !last_status) return null;
+    return { model, requests_today, daily_cap, day_reset_at, last_run_at, last_status };
+  }
+  function geminiUsageHTML(detailed) {
+    const g = Gemini.data;
+    if (!g) return '';
+    const cap = g.daily_cap, n = g.requests_today, p = Math.max(0, Math.min(100, n / cap * 100));
+    const st = g.last_status === 'rate_limited' ? '<span class="tag-stale">已限流</span>'
+      : g.last_status === 'error' ? '<span class="tag-stale">上次失敗</span>' : '';
+    return `<div class="u-row">
+      <div class="u-label"><span>Gemini API（免費額度）</span>${st}<span class="u-pct">今日 ${fmtNum(n)} / ${fmtNum(cap)} 次</span></div>
+      <div class="bar" role="progressbar" aria-label="Gemini API 今日用量" aria-valuemin="0" aria-valuemax="${cap}" aria-valuenow="${n}"><i style="width:${p}%;background:${barColor(p)}"></i></div>
+      <div class="u-meta">重置 ${fmtDate(g.day_reset_at)}（${fmtLeft(g.day_reset_at)}）</div>
+      <div class="u-meta">${esc(g.model)}${detailed ? ` · 更新 ${fmtDate(g.last_run_at)}` : ''}</div>
+    </div>`;
+  }
+  function syncGeminiState() {
+    const g = Gemini.data, a = O.byId && O.byId.gemini;
+    if (!g || !a) return;
+    const t = Date.parse(g.last_run_at);
+    if (!Number.isFinite(t)) return;
+    const remSec = Math.ceil((t + (C.geminiActiveMin || 10) * 60 * 1000 - Date.now()) / 1000);
+    if (remSec <= 0) return;
+    if (a.state === 'working' && a.mode === 'stay') a.timer = Math.max(a.timer, remSec);
+    else O.setState('gemini', 'working', remSec);
+  }
+  const Gemini = {
+    data: null,
+    async load() {
+      const url = C.geminiUrl;
+      if (!url) { this.data = null; return; }
+      try {
+        const r = await fetch(url + '?t=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const parsed = validateGemini(await r.json());
+        if (!parsed) throw new Error('invalid');
+        this.data = parsed;
+      } catch (e) {
+        if (!this.data) this.data = null;
+      }
+      const el = document.querySelector('.card[data-id="gemini"] .usage');
+      if (el) el.innerHTML = geminiUsageHTML(false);
+      if (openId === 'gemini') renderPopover();
+      syncGeminiState();
+    },
+  };
+
   function renderUsage() {
     for (const a of C.agents) { const el = document.querySelector(`.card[data-id="${a.id}"] .usage`); if (el) el.innerHTML = usageHTML(a.id); }
     renderTeam();
@@ -338,7 +397,7 @@
       ${ASSETS.portraits && ASSETS.portraits[a.id] ? `<img class="pv-portrait" src="${esc(ASSETS.portraits[a.id])}" alt="${esc(a.name)} 角色立繪" data-optional="1" loading="lazy" decoding="async">` : ''}
       <div class="pv-status" id="pvStatus" aria-live="off"></div>
       <p class="pv-intro">${esc(a.intro)}</p>
-      <div class="pv-sec">額度 ${Usage.data && Usage.data.is_demo ? '<span class="tag-demo">示範資料</span>' : '<span class="tag-live">真實用量</span>'}</div>
+      <div class="pv-sec">額度 ${a.id === 'gemini' ? (Gemini.data ? '<span class="tag-live">真實用量</span>' : '<span class="muted">尚無資料</span>') : (Usage.data && Usage.data.is_demo ? '<span class="tag-demo">示範資料</span>' : '<span class="tag-live">真實用量</span>')}</div>
       <div class="pv-usage">${usageHTML(a.id, true)}</div>
       <div class="pv-actions">
         <button type="button" data-pv="chat">💬 看群聊</button>
@@ -477,7 +536,7 @@
       case 'break': O.setAll('idle', 20); break;
       case 'pause': { const p = O.togglePause(); setBtn(b, p ? '▶' : '⏸', p ? '繼續' : '暫停', p); break; }
       case 'labels': { const on = O.toggleLabels(); b.classList.toggle('off', !on); b.setAttribute('aria-pressed', String(on)); break; }
-      case 'reload': b.classList.add('spin'); Promise.all([Usage.load(), Subs.load(), loadChat()]).finally(() => setTimeout(() => b.classList.remove('spin'), 300)); break;
+      case 'reload': b.classList.add('spin'); Promise.all([Usage.load(), Subs.load(), Gemini.load(), loadChat()]).finally(() => setTimeout(() => b.classList.remove('spin'), 300)); break;
       case 'zoom': { const z = $('#mapWrap').classList.toggle('zoomed'); setBtn(b, '🔍', z ? '符合寬度' : '放大地圖', z); break; }
       case 'bgm': Bgm.toggle(); break;
     }
@@ -554,21 +613,22 @@
   loadChat();
   Usage.load();
   Subs.load();
+  Gemini.load();
   // 分頁在背景時暫停輪詢與動畫，回到前景時立刻更新一次
   setInterval(() => { if (!document.hidden) loadChat(); }, (C.chatPollSec || 30) * 1000);
-  setInterval(() => { if (!document.hidden) { Usage.load(); Subs.load(); } }, (C.usagePollSec || 60) * 1000);
+  setInterval(() => { if (!document.hidden) { Usage.load(); Subs.load(); Gemini.load(); } }, (C.usagePollSec || 60) * 1000);
   let hiddenAt = 0;
   document.addEventListener('visibilitychange', () => {
     O.setActive(!document.hidden);
     if (document.hidden) { hiddenAt = Date.now(); return; }
-    if (Date.now() - hiddenAt > 20000) { loadChat(); Usage.load(); Subs.load(); }
+    if (Date.now() - hiddenAt > 20000) { loadChat(); Usage.load(); Subs.load(); Gemini.load(); }
     tickStatus();
   });
   setInterval(tickStatus, 400); tickStatus();
 
   // 對外 API：之後接真實 Agent / 額度用
   window.AIOffice = {
-    config: C, office: O, usage: Usage, subscriptions: Subs,
+    config: C, office: O, usage: Usage, subscriptions: Subs, gemini: Gemini,
     select: O.select, say: O.say, setState: O.setState,
     chat: Chat, reloadChat: loadChat,
   };

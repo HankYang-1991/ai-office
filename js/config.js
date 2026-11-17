@@ -14,6 +14,8 @@ window.OFFICE_CONFIG = {
   usagePollSec: 60,                  // 每隔幾秒重新讀取一次
   subscriptionsUrl: 'data/subscriptions.json',  // Hank 的 Claude / Gemini 訂閱用量
   subscriptionsStaleHours: 14,       // 來源每日 12:00、21:00 更新，逾約 14 小時標「資料較舊」
+  geminiUrl: 'data/gemini.json',     // Gemini 計算員的 API 免費額度統計（不含提示或輸出）
+  geminiActiveMin: 10,               // last_run_at 在這幾分鐘內視為工作中
   chatUrl: 'data/chat.json',        // 全員群聊真實紀錄（唯讀，由 scripts/publish_chat.py 發布）
   chatPollSec: 30,
   timeZone: 'Asia/Taipei',
@@ -22,6 +24,7 @@ window.OFFICE_CONFIG = {
   // 角色立繪 / 頭像 / 走路圖 / 背景音樂。檔案載入失敗時會自動退回程式繪製的像素角色、隱藏音樂按鈕。
   //   avatars:   256×256 PNG；portraits：約 512px 高 PNG；walk：精細版 192×320（64×64 格；欄：站立、左腳、右腳；列：下、左、右、上、坐姿為角色+椅子不含桌子）。舊版 96×128（32×32 格、4 列）仍可依圖片尺寸自動辨識。
   assets: (function () {
+    // 有繪製圖後把 'gemini' 加進 ids（檔名 assets/characters/gemini-{avatar,portrait,walk}.png），沒有圖時走程序化角色，避免 404。
     const ids = ['da-zhuren', 'xiao-zhuren', 'codex-xiao-zhaowang', 'da-zhaowang', 'zhaowang-xiaobao', 'jiantou-xiao-zhaowang', 'grok-bot', 'au-penguin'];
     const map = kind => Object.fromEntries(ids.map(id => [id, `assets/characters/${id}-${kind}.png`]));
     return {
@@ -74,6 +77,7 @@ window.OFFICE_CONFIG = {
     // 程式部
     { type: 'desk', x: 33, y: 3, w: 3, h: 1, deco: 'pc2', owner: 'codex-xiao-zhaowang' },
     { type: 'desk', x: 33, y: 7, w: 3, h: 1, deco: 'pc', owner: 'grok-bot' },
+    { type: 'desk', x: 33, y: 10, w: 3, h: 1, deco: 'pc2', owner: 'gemini' },
     { type: 'rack', x: 38, y: 2, w: 1, h: 2 },
     { type: 'rack', x: 39, y: 2, w: 1, h: 2 },
     { type: 'plant', x: 39, y: 11, w: 1, h: 1 },
@@ -95,8 +99,8 @@ window.OFFICE_CONFIG = {
   meetingCenter: [7.5, 19],
   loungeSpots: [[9,3],[10,3],[11,3],[8,3],[5,6],[6,6],[9,7],[10,7],[4,8],[11,5],[3,5],[7,9]],
 
-  // Agent：kind = human | blob | robot | penguin；seat = 座位格（在書桌下方）
-  // accessories: tie, glasses, beret, camera, headphones, spike, hardhat, pencil
+  // Agent：kind = human | blob | robot | penguin | sparkle；seat = 座位格（在書桌下方）
+  // accessories: tie, glasses, beret, camera, headphones, spike, hardhat, pencil, sparkle
   agents: [
     { id: 'da-zhuren', name: '大主人', role: '電機專案經理', short: '大主人', zone: 'ee',
       kind: 'human', color: '#3b6fd8', hair: '#2b1d12', accessories: ['tie'],
@@ -138,6 +142,11 @@ window.OFFICE_CONFIG = {
       seat: [38, 19], weights: { working: 0.5, meeting: 0.3, idle: 0.2 },
       intro: '我是這間辦公室的設計師，負責規劃大家的分工與協作 🐧',
       reply: '我把這件事排進辦公室的工作流程裡 🐧' },
+    { id: 'gemini', name: 'Gemini 計算員', role: '簡單重複運算', short: '計算員', zone: 'code',
+      kind: 'sparkle', color: '#7b6cff', accent: '#c084fc', accessories: ['sparkle'],
+      seat: [34, 11], weights: { working: 0.7, meeting: 0.1, idle: 0.2 },
+      intro: '我負責簡單、重複的換算、加總與格式整理。使用 Gemini API 免費額度，和頁面上的 Google AI Pro 訂閱是分開的。',
+      reply: '我先把數字算清楚，結果放在最前面。' },
   ],
 
   zones: {

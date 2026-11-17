@@ -30,6 +30,10 @@
         case 'camera': if (dir !== 'up') { R(ctx, cx - 3, chest, 6, 4, '#222'); R(ctx, cx - 1, chest + 1, 2, 2, '#7fd3ff'); R(ctx, cx + 1, chest - 1, 2, 1, '#444'); } break;
         case 'hardhat': R(ctx, cx - 4, top - 2, 8, 2, '#f4c20d'); R(ctx, cx - 5, top, 10, 1, '#d4a20d'); R(ctx, cx - 1, top - 3, 2, 1, '#f4c20d'); break;
         case 'pencil': R(ctx, cx + 4, top + 1, 1, 4, '#f1c40f'); R(ctx, cx + 4, top + 5, 1, 1, '#444'); break;
+        case 'sparkle':
+          R(ctx, cx - 6, top, 1, 1, '#ffe27a'); R(ctx, cx + 5, top - 2, 1, 1, '#fff');
+          R(ctx, cx + 6, top + 2, 1, 1, '#c084fc'); R(ctx, cx - 5, top + 3, 1, 1, '#8fb6ff');
+          break;
       }
     }
   }
@@ -105,7 +109,25 @@
     return { cx: ox + 6, top: oy + 1, eyeY: oy + 4, chest: oy + 8 };
   }
 
-  const KINDS = { human, blob, robot, penguin };
+  function sparkle(ctx, a, ox, oy, dir, fr, walking) {
+    const c = a.color || '#7b6cff', hi = shade(c, 0.45), lo = shade(c, -0.3), acc = a.accent || '#c084fc';
+    const f1 = walking && fr === 0 ? 1 : 0, f2 = walking && fr === 1 ? 1 : 0;
+    R(ctx, ox + 3, oy + 14 - f1, 2, 2, lo); R(ctx, ox + 7, oy + 14 - f2, 2, 2, lo);
+    R(ctx, ox + 5, oy + 1, 2, 1, acc); R(ctx, ox + 5, oy + 2, 2, 1, hi);
+    R(ctx, ox + 4, oy + 3, 4, 1, c); R(ctx, ox + 3, oy + 4, 6, 1, c); R(ctx, ox + 2, oy + 5, 8, 1, c);
+    R(ctx, ox + 1, oy + 6, 10, 2, c); R(ctx, ox + 2, oy + 8, 8, 1, c); R(ctx, ox + 3, oy + 9, 6, 2, c);
+    R(ctx, ox + 4, oy + 11, 4, 1, c); R(ctx, ox + 5, oy + 12, 2, 1, lo);
+    R(ctx, ox + 0, oy + 6, 1, 2, acc); R(ctx, ox + 11, oy + 6, 1, 2, acc);
+    R(ctx, ox + 5, oy + 6, 2, 2, hi);
+    if (dir !== 'up') {
+      const ex = dir === 'left' ? -1 : dir === 'right' ? 1 : 0;
+      R(ctx, ox + 3 + ex, oy + 6, 1, 2, '#151028'); R(ctx, ox + 8 + ex, oy + 6, 1, 2, '#151028');
+      R(ctx, ox + 5 + ex, oy + 9, 2, 1, lo);
+    }
+    return { cx: ox + 6, top: oy + 1, eyeY: oy + 6, chest: oy + 8 };
+  }
+
+  const KINDS = { human, blob, robot, penguin, sparkle };
 
   // px,py = 角色所站格子的左上角（世界像素）
   function draw(ctx, a, px, py, o) {

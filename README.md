@@ -81,6 +81,34 @@ python3 scripts/publish_subscriptions.py /workspace/ai-office-usage/usage.json -
 - 只接受允許的欄位：百分比 0–100、帶時區的 ISO 8601 時間（轉成台北 +08:00）、短字串 ≤40 字；其餘欄位丟棄。
 - 內容有變才 commit + push `data/subscriptions.json`；失敗時 exit code 非 0，且不會印出 token。
 
+
+## Gemini 計算員（本機 worker，API 金鑰不進網站）
+- 辦公室新成員 **Gemini 計算員**（`id: gemini`，程式部）負責簡單、重複的換算、加總與格式整理。
+- 網站是公開靜態頁，**不會呼叫 Gemini**。API 金鑰只放在本機環境變數 `GEMINI_API_KEY`（讀取時會去掉首尾空白），不可寫進 repo、日誌或任何 JSON。
+- 使用 Google AI Studio **免費額度**（與頁面上的 Google AI Pro 訂閱卡分開）。免費方案的提示可能會被 Google 用來改進產品。每日請求上限在太平洋時間午夜重置（= 台北時間 16:00）。
+- 本機另有安全上限（預設每日 300 次），計數存在 `/workspace/ai-office-gemini/usage-local.json`（不在 repo 內）。
+- 公開檔 `data/gemini.json` 只含非敏感統計：`model`、`requests_today`、`day_reset_at`、`last_run_at`、`last_status`（`ok` / `rate_limited` / `error`）、`daily_cap`。不含提示或輸出。
+- 卡片額度列顯示「Gemini API（免費額度）」：今日 N / 上限 次、重置時間，以及模型名稱。檔案缺失或無效時隱藏該列。若 `last_run_at` 在 10 分鐘內，角色會顯示為工作中。
+
+### 執行計算（scripts/gemini_worker.py）
+```bash
+cd ai-office   # repo 根目錄
+export GEMINI_API_KEY=...            # 只放在本機，不要寫進檔案或貼到聊天
+python3 scripts/gemini_worker.py "13.8kV、10MVA 三相線電流是多少？"
+python3 scripts/gemini_worker.py --file task.txt
+python3 scripts/gemini_worker.py "加總 12.5 8 3.25 16 0.5" --json
+python3 scripts/gemini_worker.py "任務" --max-per-day 300
+```
+- 預設模型 `gemini-3.5-flash-lite`；遇到 HTTP 404 / 429 時依序改試 `gemini-3.1-flash-lite`、`gemini-2.5-flash-lite`。
+- **預設不推送**。內容有變才把統計寫入 `data/gemini.json`；要發布到網站請另外執行：
+```bash
+export AI_OFFICE_GITHUB_TOKEN=...    # 同 publish_usage.py
+python3 scripts/gemini_worker.py --publish
+# 或
+python3 scripts/publish_gemini.py
+```
+也可以在呼叫時加上 `--publish`（本次統計有變才 commit + push）。失敗時 exit code 非 0，且不會印出 token 或 API 金鑰。
+
 ## 全員群聊（真實對話，唯讀）
 - 網站是公開的靜態頁面，所以群聊**不能在網頁上輸入**（避免陌生人叫 AI 做事、消耗額度）。
 - 流程：Hank 在 Grok Bot 對澳洲企鵝說「群聊：…」或「@大主人 …」→ 澳洲企鵝把訊息轉給被點名的夥伴（沒點名就是全員）
@@ -136,15 +164,17 @@ python3 -m http.server 8765
 | `index.html` | 頁面骨架 |
 | `css/style.css` | 版面（含 RWD） |
 | `js/config.js` | **資料驅動設定**：房間、門、家具、會議座位、休息點、Agent（顏色、造型、座位、行為權重、自介） |
-| `js/sprites.js` | 程序化像素角色（human / blob / robot / penguin + 配件），不使用外部圖檔 |
+| `js/sprites.js` | 程序化像素角色（human / blob / robot / penguin / sparkle + 配件），不使用外部圖檔 |
 | `js/office.js` | 引擎：格子地圖、BFS 尋路、碰撞避讓、狀態機（工作中/開會中/閒置/移動中）、Canvas 繪製 |
 | `js/app.js` | UI：額度卡片、Agent 列表、群聊、popover、工具列，並提供 `window.AIOffice` API |
 | `data/usage.json` | **共用額度資料**（所有 Agent 讀寫同一份） |
 | `data/usage.schema.json` | usage.json 的 JSON Schema |
 | `data/subscriptions.json` | **Hank 的 Claude / Gemini 訂閱用量**（由 `scripts/publish_subscriptions.py` 發布） |
+| `data/gemini.json` | **Gemini 計算員 API 免費額度統計**（由 `scripts/gemini_worker.py` / `publish_gemini.py` 發布，不含提示或輸出） |
 | `data/chat.json` | **全員群聊真實紀錄**（由 `scripts/publish_chat.py` 發布，最近 50 輪） |
 | `data/chat.schema.json` | chat.json 的 JSON Schema |
-| `scripts/publish_usage.py` / `scripts/publish_subscriptions.py` / `scripts/publish_chat.py` | 發布額度 / 訂閱用量 / 群聊並 push |
+| `scripts/publish_usage.py` / `scripts/publish_subscriptions.py` / `scripts/publish_chat.py` / `scripts/publish_gemini.py` | 發布額度 / 訂閱用量 / 群聊 / Gemini API 統計並 push |
+| `scripts/gemini_worker.py` | 本機 Gemini 計算員（金鑰不進 repo） |
 | `js/usage-demo.js` | 讀不到 usage.json 時的內建示範資料（由 usage.json 產生） |
 
 ## 共用額度資料格式（usage.json）
@@ -185,6 +215,7 @@ AIOffice.usage.load()                 // 立即重新讀取 usage.json
 AIOffice.setState('da-zhuren', 'meeting')   // working | meeting | idle
 AIOffice.say('au-penguin', '開工！', 3000)  // 頭上對話泡泡
 AIOffice.reloadChat()                 // 立即重新讀取 chat.json（群聊唯讀，內容只來自 chat.json）
+AIOffice.gemini.load()                // 立即重新讀取 gemini.json（計算員 API 額度）
 AIOffice.select('codex-xiao-zhaowang')      // 選取並顯示詳細資訊
 ```
 
@@ -193,5 +224,6 @@ AIOffice.select('codex-xiao-zhaowang')      // 選取並顯示詳細資訊
 - `assets/characters/<id>-avatar.png`（256×256 頭像）、`<id>-portrait.png`（約 512px 高立繪）、`<id>-walk.png`（精細版 192×320 走路圖，64×64 格；欄：站立、左腳、右腳；列：下、左、右、上、坐姿為角色與椅子不含桌子。舊版 96×128／32×32 格、4 列仍可用）— 角色美術：大沼王-漫畫家。立繪已壓成 256 色 PNG。
 - `assets/audio/office-bgm.ogg` / `.mp3` —《AI Office Night Shift (Loop)》，作曲：尖頭小沼王-音樂家。90 秒無縫循環。
 - 路徑在 `js/config.js` 的 `assets` 登記。任何圖片載入失敗都會自動退回程式繪製的像素角色；音樂檔不存在就不顯示音樂按鈕。
+- **Gemini 計算員**目前使用程序化的藍紫星形角色（`kind: sparkle`）。之後若有繪製圖，把 `assets/characters/gemini-avatar.png`、`gemini-portrait.png`、`gemini-walk.png` 放進 repo，並把 `'gemini'` 加進 `js/config.js` 的 `assets` ids 即可（現在不加是為了避免檔案尚未存在時的 404）。
 - 背景音樂預設靜音，只有使用者按下按鈕才播放（優先用 Web Audio 無縫循環，OGG 解不開改用 MP3，再不行用 `<audio loop>`）。播放/靜音的選擇記在 localStorage；即使上次有開，重新整理也不會自動播放，只會在按鈕上提示。
 - 分頁在背景時動畫與資料輪詢都會暫停；額度讀取失敗時保留上一次的真實資料並顯示提醒。
