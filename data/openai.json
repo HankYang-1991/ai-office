@@ -1,0 +1,10 @@
+{
+  "model": "gpt-5.4-mini",
+  "requests_today": 2,
+  "spend_today_usd": 0.000796,
+  "spend_month_usd": 0.000796,
+  "monthly_cap_usd": 95.0,
+  "month_reset_at": "2026-12-01T00:00:00+08:00",
+  "last_run_at": "2026-11-18T01:43:27+08:00",
+  "last_status": "ok"
+}
