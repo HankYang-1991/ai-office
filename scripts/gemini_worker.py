@@ -323,12 +323,12 @@ def model_chain(preferred):
     return out
 
 
-def build_body(prompt, as_json=False):
+def build_body(prompt, as_json=False, max_output_tokens=1024):
     sys_text = SYSTEM + ((" " + JSON_HINT) if as_json else "")
     body = {
         "systemInstruction": {"parts": [{"text": sys_text}]},
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 1024},
+        "generationConfig": {"temperature": 0.2, "maxOutputTokens": int(max_output_tokens)},
     }
     if as_json:
         body["generationConfig"]["responseMimeType"] = "application/json"
@@ -370,10 +370,10 @@ def http_post(url, body, key, opener=None):
         return None, b"", e
 
 
-def call_gemini(prompt, models, key, as_json=False, opener=None):
+def call_gemini(prompt, models, key, as_json=False, opener=None, max_output_tokens=1024):
     """依序嘗試模型。回傳 dict: ok, model, text, status, http_code, error。"""
     last = {"ok": False, "model": models[0], "text": None, "status": STATUS_ERR, "http_code": None, "error": "未送出請求"}
-    body = build_body(prompt, as_json=as_json)
+    body = build_body(prompt, as_json=as_json, max_output_tokens=max_output_tokens)
     for model in models:
         url = f"{API_ROOT}/{model}:generateContent"
         code, raw, err = http_post(url, body, key, opener=opener)
@@ -432,12 +432,15 @@ def main(argv=None, opener=None, key_fn=None):
     ap.add_argument("--json", dest="as_json", action="store_true", help="要求模型以 JSON 作答")
     ap.add_argument("--model", default=DEFAULT_MODELS[0], help="優先使用的模型（失敗時再回退）")
     ap.add_argument("--max-per-day", type=int, default=DEFAULT_CAP, help=f"本機每日安全上限（預設 {DEFAULT_CAP}）")
+    ap.add_argument("--max-output-tokens", type=int, default=1024, help="模型輸出上限（預設 1024）")
     ap.add_argument("--publish", action="store_true", help="統計有變才把 data/gemini.json commit + push")
     ap.add_argument("--no-write", action="store_true", help="只呼叫、不寫統計檔（測試用）")
     a = ap.parse_args(argv)
 
     if a.max_per_day is None or a.max_per_day < 1 or a.max_per_day > 100000:
         die("--max-per-day 必須是 1–100000 的整數")
+    if a.max_output_tokens is None or a.max_output_tokens < 16 or a.max_output_tokens > 8192:
+        die("--max-output-tokens 必須是 16–8192 的整數")
 
     # 只發布、不呼叫（先提交本地 data/gemini.json，再 pull --rebase + push，避免髒樹擋下）
     if a.publish and not a.task and not a.file:
@@ -485,7 +488,8 @@ def main(argv=None, opener=None, key_fn=None):
         local["requests"] += 1
         tried += 1
         used.append(model)
-        result = call_gemini(prompt, [model], key, as_json=a.as_json, opener=opener)
+        result = call_gemini(prompt, [model], key, as_json=a.as_json, opener=opener,
+                             max_output_tokens=a.max_output_tokens)
         local["last_model"] = result["model"]
         local["last_run_at"] = fmt_time(now)
         local["last_status"] = result["status"]

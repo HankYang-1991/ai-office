@@ -353,7 +353,13 @@
     $('#agentList').addEventListener('click', onItem);
     $('#agentList').addEventListener('keydown', onItem);
     $('#agentCount').textContent = `Agents: ${C.agents.length}`;
-    if (ASSETS.artCredit) { const ac = $('#artCredit'); ac.hidden = false; ac.textContent = ` · 角色美術：${ASSETS.artCredit}`; }
+    if (ASSETS.artCredit || ASSETS.geminiArtCredit) {
+      const ac = $('#artCredit'); ac.hidden = false;
+      const bits = [];
+      if (ASSETS.artCredit) bits.push(`角色美術：${ASSETS.artCredit}`);
+      if (ASSETS.geminiArtCredit) bits.push(ASSETS.geminiArtCredit);
+      ac.textContent = ' · ' + bits.join(' · ');
+    }
   }
   // 從卡片/列表選角色：popover 不在畫面上時捲過去讓它看得到；鍵盤操作時把焦點移到 popover
   let returnFocus = null;

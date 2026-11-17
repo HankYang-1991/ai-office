@@ -224,6 +224,6 @@ AIOffice.select('codex-xiao-zhaowang')      // 選取並顯示詳細資訊
 - `assets/characters/<id>-avatar.png`（256×256 頭像）、`<id>-portrait.png`（約 512px 高立繪）、`<id>-walk.png`（精細版 192×320 走路圖，64×64 格；欄：站立、左腳、右腳；列：下、左、右、上、坐姿為角色與椅子不含桌子。舊版 96×128／32×32 格、4 列仍可用）— 角色美術：大沼王-漫畫家。立繪已壓成 256 色 PNG。
 - `assets/audio/office-bgm.ogg` / `.mp3` —《AI Office Night Shift (Loop)》，作曲：尖頭小沼王-音樂家。90 秒無縫循環。
 - 路徑在 `js/config.js` 的 `assets` 登記。任何圖片載入失敗都會自動退回程式繪製的像素角色；音樂檔不存在就不顯示音樂按鈕。
-- **Gemini 計算員**目前使用程序化的藍紫星形角色（`kind: sparkle`）。之後若有繪製圖，把 `assets/characters/gemini-avatar.png`、`gemini-portrait.png`、`gemini-walk.png` 放進 repo，並把 `'gemini'` 加進 `js/config.js` 的 `assets` ids 即可（現在不加是為了避免檔案尚未存在時的 404）。
+- **Gemini 計算員**造型由它自己以文字模型畫出像素格（計算機／星光主題），再編成 `assets/characters/gemini-{avatar,portrait,walk}.png`。頁腳註記「Gemini 計算員造型：Gemini 自繪」。
 - 背景音樂預設靜音，只有使用者按下按鈕才播放（優先用 Web Audio 無縫循環，OGG 解不開改用 MP3，再不行用 `<audio loop>`）。播放/靜音的選擇記在 localStorage；即使上次有開，重新整理也不會自動播放，只會在按鈕上提示。
 - 分頁在背景時動畫與資料輪詢都會暫停；額度讀取失敗時保留上一次的真實資料並顯示提醒。

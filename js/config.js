@@ -24,12 +24,12 @@ window.OFFICE_CONFIG = {
   // 角色立繪 / 頭像 / 走路圖 / 背景音樂。檔案載入失敗時會自動退回程式繪製的像素角色、隱藏音樂按鈕。
   //   avatars:   256×256 PNG；portraits：約 512px 高 PNG；walk：精細版 192×320（64×64 格；欄：站立、左腳、右腳；列：下、左、右、上、坐姿為角色+椅子不含桌子）。舊版 96×128（32×32 格、4 列）仍可依圖片尺寸自動辨識。
   assets: (function () {
-    // 有繪製圖後把 'gemini' 加進 ids（檔名 assets/characters/gemini-{avatar,portrait,walk}.png），沒有圖時走程序化角色，避免 404。
-    const ids = ['da-zhuren', 'xiao-zhuren', 'codex-xiao-zhaowang', 'da-zhaowang', 'zhaowang-xiaobao', 'jiantou-xiao-zhaowang', 'grok-bot', 'au-penguin'];
+    const ids = ['da-zhuren', 'xiao-zhuren', 'codex-xiao-zhaowang', 'da-zhaowang', 'zhaowang-xiaobao', 'jiantou-xiao-zhaowang', 'grok-bot', 'au-penguin', 'gemini'];
     const map = kind => Object.fromEntries(ids.map(id => [id, `assets/characters/${id}-${kind}.png`]));
     return {
       avatars: map('avatar'), portraits: map('portrait'), walk: map('walk'),
       artCredit: '大沼王-漫畫家',
+      geminiArtCredit: 'Gemini 計算員造型：Gemini 自繪',
       bgm: { ogg: 'assets/audio/office-bgm.ogg', mp3: 'assets/audio/office-bgm.mp3',
              title: 'AI Office Night Shift (Loop)', credit: '尖頭小沼王-音樂家', volume: 0.5 },
     };
