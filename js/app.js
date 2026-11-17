@@ -51,6 +51,16 @@
   function teamEntry() { return (Usage.data && Usage.data.entries || []).find(e => e.agent_id === 'team'); }
   function realRowHTML(e, detailed) {
     if (e.scope === 'own') {
+      // Hank 的 Codex 方案只有一個額度：顯示剩餘 % 與重置時間，沒資料的格子不顯示
+      if (!e.reset_at || e.reported === false || typeof e.used !== 'number') return '';
+      const left = Math.max(0, Math.min(100, 100 - e.used));
+      return `<div class="u-row">
+        <div class="u-label"><span>額度</span><span class="u-pct">剩餘 ${fmtNum(left)}%</span></div>
+        <div class="bar"><i style="width:${left}%;background:${barColor(e.used)}"></i></div>
+        <div class="u-meta">重置 ${fmtDate(e.reset_at)}（${fmtLeft(e.reset_at)}）</div>
+      </div>`;
+    }
+    if (e.scope === 'own') {
       const state = window.CodexState.state(e);
       if (state !== 'fresh') {
         const label = e.slot === 'secondary' ? '次要額度' : '主要額度';
