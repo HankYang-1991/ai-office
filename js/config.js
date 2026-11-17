@@ -32,8 +32,8 @@ window.OFFICE_CONFIG = {
       avatars: map('avatar'), portraits: map('portrait'), walk: map('walk'),
       artCredit: '大沼王-漫畫家',
       geminiArtCredit: 'Gemini 計算員造型：Gemini 自繪',
-      bgm: { ogg: 'assets/audio/office-bgm.ogg', mp3: 'assets/audio/office-bgm.mp3',
-             title: 'AI Office Night Shift (Loop)', credit: '尖頭小沼王-音樂家', volume: 0.5 },
+      bgm: { ogg: 'assets/audio/office-bgm.ogg?v=2', mp3: 'assets/audio/office-bgm.mp3?v=2',
+             title: 'Pixel Office Sunshine (Loop)', credit: '尖頭小沼王-音樂家', volume: 0.5 },
     };
   })(),
 
