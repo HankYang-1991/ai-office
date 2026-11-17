@@ -35,6 +35,13 @@
     return day ? `還有 ${day} 天 ${h % 24} 小時` : h ? `還有 ${h} 小時 ${m % 60} 分` : `還有 ${m} 分`;
   }
   const fmtNum = n => n == null ? '∞' : Math.abs(n) >= 10000 ? (n / 1000).toFixed(0) + 'k' : (Math.round(n * 10) / 10).toLocaleString('zh-TW');
+  const fmtUsd = n => {
+    if (typeof n !== 'number' || !Number.isFinite(n)) return '—';
+    if (n === 0) return '$0';
+    if (Math.abs(n) < 0.01) return '$' + n.toFixed(4);
+    return '$' + n.toFixed(2);
+  };
+  const fmtUsdCap = n => (typeof n === 'number' && Number.isFinite(n)) ? ('$' + n) : '—';
   const WIN = { '5h': '5 小時', daily: '每日', weekly: '每週', monthly: '每月' };
 
   // ---------- 共用額度資料 ----------
@@ -110,6 +117,7 @@
   }
   function usageHTML(id, detailed) {
     if (id === 'gemini') return geminiUsageHTML(detailed);
+    if (id === 'gpt') return openaiUsageHTML(detailed);
     const list = Usage.get(id);
     if (!list.length) return '<div class="u-empty">尚無額度資料</div>';
     const demo = Usage.data.is_demo;
@@ -310,6 +318,70 @@
     },
   };
 
+  // ---------- GPT 分析師 OpenAI API 花費（無每日上限；每月硬上限；檔案缺失則隱藏列） ----------
+  function validOaiMoney(v, lo, hi) { return typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi ? v : null; }
+  function validateOpenAI(j) {
+    if (!j || typeof j !== 'object' || Array.isArray(j)) return null;
+    const model = typeof j.model === 'string' && /^[A-Za-z0-9._-]{1,40}$/.test(j.model) ? j.model : null;
+    const requests_today = validGemInt(j.requests_today, 0, 1000000);
+    const spend_today_usd = validOaiMoney(j.spend_today_usd, 0, 100000);
+    const spend_month_usd = validOaiMoney(j.spend_month_usd, 0, 100000);
+    const monthly_cap_usd = validOaiMoney(j.monthly_cap_usd, 0.01, 100000);
+    const month_reset_at = validSubIso(j.month_reset_at);
+    const last_run_at = validSubIso(j.last_run_at);
+    const last_status = (j.last_status === 'ok' || j.last_status === 'rate_limited' || j.last_status === 'error' || j.last_status === 'insufficient_quota') ? j.last_status : null;
+    if (!model || requests_today == null || spend_today_usd == null || spend_month_usd == null || monthly_cap_usd == null || !month_reset_at || !last_run_at || !last_status) return null;
+    return { model, requests_today, spend_today_usd, spend_month_usd, monthly_cap_usd, month_reset_at, last_run_at, last_status };
+  }
+  function openaiUsageHTML(detailed) {
+    const g = OpenAI.data;
+    if (!g) return '';
+    const cap = g.monthly_cap_usd, n = g.spend_month_usd, p = Math.max(0, Math.min(100, n / cap * 100));
+    const st = g.last_status === 'rate_limited' ? '<span class="tag-stale">已限流</span>'
+      : g.last_status === 'insufficient_quota' ? '<span class="tag-stale">額度不足</span>'
+      : g.last_status === 'error' ? '<span class="tag-stale">上次失敗</span>'
+      : (n >= cap ? '<span class="tag-stale">已達月上限</span>' : '');
+    return `<div class="u-row">
+      <div class="u-label"><span>OpenAI API</span>${st}<span class="u-pct">今日 ${fmtUsd(g.spend_today_usd)} 花費</span></div>
+    </div>
+    <div class="u-row">
+      <div class="u-label"><span>本月花費</span><span class="u-pct">${fmtUsd(n)} / ${fmtUsdCap(cap)}</span></div>
+      <div class="bar" role="progressbar" aria-label="OpenAI API 本月花費" aria-valuemin="0" aria-valuemax="${cap}" aria-valuenow="${n}"><i style="width:${p}%;background:${barColor(p)}"></i></div>
+      <div class="u-meta">重置 ${fmtDate(g.month_reset_at)}（${fmtLeft(g.month_reset_at)}）</div>
+      <div class="u-meta">${esc(g.model)}${detailed ? ` · 更新 ${fmtDate(g.last_run_at)}` : ''}</div>
+    </div>`;
+  }
+  function syncOpenAIState() {
+    const g = OpenAI.data, a = O.byId && O.byId.gpt;
+    if (!g || !a) return;
+    const t = Date.parse(g.last_run_at);
+    if (!Number.isFinite(t)) return;
+    const remSec = Math.ceil((t + (C.openaiActiveMin || 10) * 60 * 1000 - Date.now()) / 1000);
+    if (remSec <= 0) return;
+    if (a.state === 'working' && a.mode === 'stay') a.timer = Math.max(a.timer, remSec);
+    else O.setState('gpt', 'working', remSec);
+  }
+  const OpenAI = {
+    data: null,
+    async load() {
+      const url = C.openaiUrl;
+      if (!url) { this.data = null; return; }
+      try {
+        const r = await fetch(url + '?t=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const parsed = validateOpenAI(await r.json());
+        if (!parsed) throw new Error('invalid');
+        this.data = parsed;
+      } catch (e) {
+        if (!this.data) this.data = null;
+      }
+      const el = document.querySelector('.card[data-id="gpt"] .usage');
+      if (el) el.innerHTML = openaiUsageHTML(false);
+      if (openId === 'gpt') renderPopover();
+      syncOpenAIState();
+    },
+  };
+
   function renderUsage() {
     for (const a of C.agents) { const el = document.querySelector(`.card[data-id="${a.id}"] .usage`); if (el) el.innerHTML = usageHTML(a.id); }
     renderTeam();
@@ -403,7 +475,7 @@
       ${ASSETS.portraits && ASSETS.portraits[a.id] ? `<img class="pv-portrait" src="${esc(ASSETS.portraits[a.id])}" alt="${esc(a.name)} 角色立繪" data-optional="1" loading="lazy" decoding="async">` : ''}
       <div class="pv-status" id="pvStatus" aria-live="off"></div>
       <p class="pv-intro">${esc(a.intro)}</p>
-      <div class="pv-sec">額度 ${a.id === 'gemini' ? (Gemini.data ? '<span class="tag-live">真實用量</span>' : '<span class="muted">尚無資料</span>') : (Usage.data && Usage.data.is_demo ? '<span class="tag-demo">示範資料</span>' : '<span class="tag-live">真實用量</span>')}</div>
+      <div class="pv-sec">額度 ${a.id === 'gemini' ? (Gemini.data ? '<span class="tag-live">真實用量</span>' : '<span class="muted">尚無資料</span>') : a.id === 'gpt' ? (OpenAI.data ? '<span class="tag-live">真實用量</span>' : '<span class="muted">尚無資料</span>') : (Usage.data && Usage.data.is_demo ? '<span class="tag-demo">示範資料</span>' : '<span class="tag-live">真實用量</span>')}</div>
       <div class="pv-usage">${usageHTML(a.id, true)}</div>
       <div class="pv-actions">
         <button type="button" data-pv="chat">💬 看群聊</button>
@@ -542,7 +614,7 @@
       case 'break': O.setAll('idle', 20); break;
       case 'pause': { const p = O.togglePause(); setBtn(b, p ? '▶' : '⏸', p ? '繼續' : '暫停', p); break; }
       case 'labels': { const on = O.toggleLabels(); b.classList.toggle('off', !on); b.setAttribute('aria-pressed', String(on)); break; }
-      case 'reload': b.classList.add('spin'); Promise.all([Usage.load(), Subs.load(), Gemini.load(), loadChat()]).finally(() => setTimeout(() => b.classList.remove('spin'), 300)); break;
+      case 'reload': b.classList.add('spin'); Promise.all([Usage.load(), Subs.load(), Gemini.load(), OpenAI.load(), loadChat()]).finally(() => setTimeout(() => b.classList.remove('spin'), 300)); break;
       case 'zoom': { const z = $('#mapWrap').classList.toggle('zoomed'); setBtn(b, '🔍', z ? '符合寬度' : '放大地圖', z); break; }
       case 'bgm': Bgm.toggle(); break;
     }
@@ -620,21 +692,22 @@
   Usage.load();
   Subs.load();
   Gemini.load();
+  OpenAI.load();
   // 分頁在背景時暫停輪詢與動畫，回到前景時立刻更新一次
   setInterval(() => { if (!document.hidden) loadChat(); }, (C.chatPollSec || 30) * 1000);
-  setInterval(() => { if (!document.hidden) { Usage.load(); Subs.load(); Gemini.load(); } }, (C.usagePollSec || 60) * 1000);
+  setInterval(() => { if (!document.hidden) { Usage.load(); Subs.load(); Gemini.load(); OpenAI.load(); } }, (C.usagePollSec || 60) * 1000);
   let hiddenAt = 0;
   document.addEventListener('visibilitychange', () => {
     O.setActive(!document.hidden);
     if (document.hidden) { hiddenAt = Date.now(); return; }
-    if (Date.now() - hiddenAt > 20000) { loadChat(); Usage.load(); Subs.load(); Gemini.load(); }
+    if (Date.now() - hiddenAt > 20000) { loadChat(); Usage.load(); Subs.load(); Gemini.load(); OpenAI.load(); }
     tickStatus();
   });
   setInterval(tickStatus, 400); tickStatus();
 
   // 對外 API：之後接真實 Agent / 額度用
   window.AIOffice = {
-    config: C, office: O, usage: Usage, subscriptions: Subs, gemini: Gemini,
+    config: C, office: O, usage: Usage, subscriptions: Subs, gemini: Gemini, openai: OpenAI,
     select: O.select, say: O.say, setState: O.setState,
     chat: Chat, reloadChat: loadChat,
   };

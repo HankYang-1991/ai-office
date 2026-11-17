@@ -53,8 +53,8 @@ h2{font-size:14px;margin:0;letter-spacing:.05em}
 .status em{font-style:normal}
 .role{font-size:11px;color:var(--muted);margin-bottom:4px}
 .u-row{margin-top:4px}
-.u-label{display:flex;align-items:center;font-size:11px;color:#c9d0e6}
-.u-pct{margin-left:auto;font-family:var(--mono)}
+.u-label{display:flex;align-items:center;flex-wrap:wrap;gap:2px 8px;font-size:11px;color:#c9d0e6}
+.u-pct{margin-left:auto;font-family:var(--mono);white-space:nowrap}
 .bar{height:7px;background:#0b0e19;border:1px solid #2f3760;margin:2px 0}
 .bar i{display:block;height:100%}
 .u-meta{font-size:10.5px;color:var(--muted);font-family:var(--mono)}

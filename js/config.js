@@ -16,6 +16,8 @@ window.OFFICE_CONFIG = {
   subscriptionsStaleHours: 14,       // 來源每日 12:00、21:00 更新，逾約 14 小時標「資料較舊」
   geminiUrl: 'data/gemini.json',     // Gemini 計算員的 API 免費額度統計（不含提示或輸出）
   geminiActiveMin: 10,               // last_run_at 在這幾分鐘內視為工作中
+  openaiUrl: 'data/openai.json',     // GPT 分析師的 API 花費統計（不含提示、輸出或金鑰）
+  openaiActiveMin: 10,               // last_run_at 在這幾分鐘內視為工作中
   chatUrl: 'data/chat.json',        // 全員群聊真實紀錄（唯讀，由 scripts/publish_chat.py 發布）
   chatPollSec: 30,
   timeZone: 'Asia/Taipei',
@@ -74,6 +76,7 @@ window.OFFICE_CONFIG = {
     { type: 'printer', x: 24, y: 8, w: 2, h: 1 },
     { type: 'cabinet', x: 26, y: 10, w: 2, h: 1 },
     { type: 'plant', x: 27, y: 2, w: 1, h: 1 },
+    { type: 'desk', x: 19, y: 10, w: 3, h: 1, deco: 'pc', owner: 'gpt' },
     // 程式部
     { type: 'desk', x: 33, y: 3, w: 3, h: 1, deco: 'pc2', owner: 'codex-xiao-zhaowang' },
     { type: 'desk', x: 33, y: 7, w: 3, h: 1, deco: 'pc', owner: 'grok-bot' },
@@ -99,8 +102,9 @@ window.OFFICE_CONFIG = {
   meetingCenter: [7.5, 19],
   loungeSpots: [[9,3],[10,3],[11,3],[8,3],[5,6],[6,6],[9,7],[10,7],[4,8],[11,5],[3,5],[7,9]],
 
-  // Agent：kind = human | blob | robot | penguin | sparkle；seat = 座位格（在書桌下方）
-  // accessories: tie, glasses, beret, camera, headphones, spike, hardhat, pencil, sparkle
+  // Agent：kind = human | blob | robot | penguin | sparkle | knot；seat = 座位格（在書桌下方）
+  // accessories: tie, glasses, beret, camera, headphones, spike, hardhat, pencil, sparkle, knot
+  // GPT 分析師目前用程序化 knot 造型；之後若有 gpt-avatar/portrait/walk.png，再把 'gpt' 加進上方 assets ids。
   agents: [
     { id: 'da-zhuren', name: '大主人', role: '電機專案經理', short: '大主人', zone: 'ee',
       kind: 'human', color: '#3b6fd8', hair: '#2b1d12', accessories: ['tie'],
@@ -147,6 +151,11 @@ window.OFFICE_CONFIG = {
       seat: [34, 11], weights: { working: 0.7, meeting: 0.1, idle: 0.2 },
       intro: '我負責簡單、重複的換算、加總與格式整理。使用 Gemini API 免費額度，和頁面上的 Google AI Pro 訂閱是分開的。',
       reply: '我先把數字算清楚，結果放在最前面。' },
+    { id: 'gpt', name: 'GPT 分析師', role: '分析與工程推理', short: '分析師', zone: 'ee',
+      kind: 'knot', color: '#1c2e32', accent: '#2d9d8a', accessories: ['knot'],
+      seat: [20, 11], weights: { working: 0.7, meeting: 0.15, idle: 0.15 },
+      intro: '我負責分析、文件摘要與整理，以及工程推理。使用 OpenAI API（與 ChatGPT Pro 訂閱分開），本月花費有硬上限。',
+      reply: '我先給結論，再補推論與整理。' },
   ],
 
   zones: {

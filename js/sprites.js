@@ -34,6 +34,14 @@
           R(ctx, cx - 6, top, 1, 1, '#ffe27a'); R(ctx, cx + 5, top - 2, 1, 1, '#fff');
           R(ctx, cx + 6, top + 2, 1, 1, '#c084fc'); R(ctx, cx - 5, top + 3, 1, 1, '#8fb6ff');
           break;
+        case 'knot':
+          if (dir !== 'up') {
+            const teal = '#2d9d8a', hi = '#5ec8b4';
+            R(ctx, cx - 1, chest, 2, 3, teal);
+            R(ctx, cx - 2, chest + 1, 4, 1, hi);
+            R(ctx, cx - 1, chest + 1, 2, 1, '#0b1c1e');
+          }
+          break;
       }
     }
   }
@@ -127,7 +135,27 @@
     return { cx: ox + 6, top: oy + 1, eyeY: oy + 6, chest: oy + 8 };
   }
 
-  const KINDS = { human, blob, robot, penguin, sparkle };
+  function knot(ctx, a, ox, oy, dir, fr, walking) {
+    const body = a.color || '#1c2e32', lo = shade(body, -0.25), hi = shade(body, 0.28);
+    const teal = a.accent || '#2d9d8a', thi = shade(teal, 0.35);
+    const f1 = walking && fr === 0 ? 1 : 0, f2 = walking && fr === 1 ? 1 : 0;
+    R(ctx, ox + 3, oy + 14 - f1, 2, 2, lo); R(ctx, ox + 7, oy + 14 - f2, 2, 2, lo);
+    R(ctx, ox + 2, oy + 8, 8, 6, body); R(ctx, ox + 3, oy + 13, 6, 1, lo);
+    R(ctx, ox + 3, oy + 2, 6, 6, body); R(ctx, ox + 2, oy + 3, 8, 4, body);
+    R(ctx, ox + 4, oy + 2, 4, 1, hi);
+    if (dir !== 'up') {
+      const ex = dir === 'left' ? -1 : dir === 'right' ? 1 : 0;
+      R(ctx, ox + 4 + ex, oy + 5, 1, 1, teal); R(ctx, ox + 7 + ex, oy + 5, 1, 1, teal);
+      R(ctx, ox + 5, oy + 9, 2, 3, teal);
+      R(ctx, ox + 4, oy + 10, 4, 1, thi);
+      R(ctx, ox + 5, oy + 10, 2, 1, '#0b1c1e');
+    } else {
+      R(ctx, ox + 5, oy + 10, 2, 2, lo);
+    }
+    return { cx: ox + 6, top: oy + 2, eyeY: oy + 5, chest: oy + 9 };
+  }
+
+  const KINDS = { human, blob, robot, penguin, sparkle, knot };
 
   // px,py = 角色所站格子的左上角（世界像素）
   function draw(ctx, a, px, py, o) {

@@ -28,7 +28,7 @@ PROVIDER = "grok-bot"
 # 不在 Grok Bot 用量報告裡的 Agent（例如在 Hank 筆電上跑的 OpenAI Codex）
 NOT_CONNECTED = {"codex-xiao-zhaowang": ("codex", "OpenAI Codex，在 Hank 的筆電上執行，尚未接上額度回報")}
 # 有自己額度來源、不寫入 usage.json（避免和卡片上的獨立額度列衝突）
-SKIP_TEAM = {"gemini"}  # Gemini 計算員：data/gemini.json
+SKIP_TEAM = {"gemini", "gpt"}  # Gemini 計算員／GPT 分析師：各自的 data/*.json
 CODEX_ID = "codex-xiao-zhaowang"
 CODEX_NAME = "codex-小沼王"
 STALE_HOURS = 24
