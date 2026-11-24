@@ -1,10 +1,10 @@
 {
   "model": "gpt-6.2-astra",
-  "requests_today": 6,
-  "spend_today_usd": 0.63436,
-  "spend_month_usd": 7.776436,
+  "requests_today": 3,
+  "spend_today_usd": 0.319616,
+  "spend_month_usd": 8.096052,
   "monthly_cap_usd": 95.0,
   "month_reset_at": "2026-12-01T00:00:00+08:00",
-  "last_run_at": "2026-11-23T23:01:38+08:00",
+  "last_run_at": "2026-11-24T11:53:23+08:00",
   "last_status": "ok"
 }
