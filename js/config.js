@@ -40,6 +40,8 @@ window.OFFICE_CONFIG = {
           title: "Quagsire's Happy Swamp Stroll", credit: '尖頭小沼王-音樂家' },
         { ogg: 'assets/audio/office-bgm-3.ogg', mp3: 'assets/audio/office-bgm-3.mp3',
           title: 'Buddies at Work! Pixel Office Teamwork', credit: '尖頭小沼王-音樂家' },
+        { ogg: 'assets/audio/office-bgm-4.ogg', mp3: 'assets/audio/office-bgm-4.mp3',
+          title: 'Go! Pixel Office Heroes', credit: '尖頭小沼王-音樂家' },
       ] },
     };
   })(),
