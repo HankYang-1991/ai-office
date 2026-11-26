@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-11-26T12:15:35+08:00",
+  "updated_at": "2026-11-26T21:09:14+08:00",
   "claude": {
     "plan": "Pro",
     "session_pct": 0,
@@ -11,7 +11,7 @@
   "gemini": {
     "plan": "Google AI Pro",
     "current_pct": 0,
-    "current_reset": "2026-11-26T16:54:00+08:00",
+    "current_reset": "2026-11-26T21:54:00+08:00",
     "weekly_pct": 1,
     "weekly_reset": "2026-12-01T10:54:00+08:00"
   }
