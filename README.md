@@ -260,3 +260,17 @@ AIOffice.select('codex-xiao-zhaowang')      // 選取並顯示詳細資訊
 - **Gemini 計算員**造型由它自己以文字模型畫出像素格（計算機／星光主題），再編成 `assets/characters/gemini-{avatar,portrait,walk}.png`。頁腳註記「Gemini 計算員造型：Gemini 自繪」。
 - 背景音樂預設靜音，只有使用者按下按鈕才播放（優先用 Web Audio 無縫循環，OGG 解不開改用 MP3，再不行用 `<audio loop>`）。播放/靜音的選擇記在 localStorage；即使上次有開，重新整理也不會自動播放，只會在按鈕上提示。
 - 分頁在背景時動畫與資料輪詢都會暫停；額度讀取失敗時保留上一次的真實資料並顯示提醒。
+
+## v2 改版（2026-11）
+
+- 頂部額度警示橫幅（紅／黃／綠、資料過期提醒、前三大用量與分流建議），所有額度條統一為「已用 %」：<70% 綠、70–85% 黃、>85% 紅。
+- 工具列分三組（場景行為＋自動狀態／模擬與同步／背景音樂迷你播放器），右側欄分頁「全員群聊｜角色詳情」，唯讀監控、@Agent 一鍵複製指令。
+- 地圖擴充為 8 間：新增「戰情室／交易大廳」、「機房與額度中控室」、「圖面審查室」。角色行為由 JSON 驅動（工作中、交接動畫、過載冒汗、額度耗盡充電中、閒置散步）。
+- 「今日時間軸」回放：讀 `data/history.json`（只記錄真實快照）。
+
+```bash
+python3 scripts/record_snapshot.py            # 記錄一筆快照到 data/history.json（--dry-run 只預覽、--publish 直接 commit/push）
+python3 scripts/check_alerts.py               # 輸出 JSON 警示報告；--exit-code 需通知時回傳 2
+```
+
+`scripts/publish_usage.py` 每次發佈 usage.json 時也會自動記錄快照。

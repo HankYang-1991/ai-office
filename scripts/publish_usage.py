@@ -14,6 +14,7 @@ codex-小沼王 的 OpenAI Codex 獨立額度（不算在團隊額度內）：�
   時間可用 Z（UTC）或 +08:00，一律轉成台北時間。secondary 為 null 時網站顯示「尚未回報」。
   沒提供時沿用目前 data/usage.json 裡的 codex 資料（沒有則顯示尚未接上）。
 選項：--no-push 只寫檔不 commit/push；--dry-run 只印出結果不寫檔。
+v2：寫入 usage.json 時會自動呼叫 scripts/record_snapshot.py 記一筆時間軸快照，data/history.json 一起 commit。
 推送需要環境變數 AI_OFFICE_GITHUB_TOKEN（GitHub fine-grained token，ai-office repo Contents: write）。
 """
 import argparse, datetime as dt, json, os, re, subprocess, sys, unicodedata
@@ -234,6 +235,17 @@ def git(*args, check=True):
     return r
 
 
+def record_history():
+    """v2：每次寫入 usage.json 順手記一筆時間軸快照（data/history.json）；失敗只警告，不影響額度發布。"""
+    try:
+        import record_snapshot
+        snap, h, replaced = record_snapshot.record()
+        return f"；時間軸快照 {'覆蓋' if replaced else '新增'}（共 {len(h['snapshots'])} 筆）"
+    except Exception as e:  # noqa: BLE001
+        print(f"警告：記錄時間軸快照失敗（{e}），usage.json 照常發布", file=sys.stderr)
+        return ""
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("input", nargs="?", default="-", help="報告 JSON 檔案路徑，或 - 代表 stdin")
@@ -284,10 +296,13 @@ def main():
         print(f"沒有變化：團隊每週已用 {team}%，codex：{codex_src}，未 commit")
         return
     USAGE.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    hist = record_history()
     if not push:
-        print(f"已寫入 {USAGE}（未 push）：團隊每週已用 {team}%，codex：{codex_src}")
+        print(f"已寫入 {USAGE}（未 push）：團隊每週已用 {team}%，codex：{codex_src}{hist}")
         return
     git("add", "data/usage.json")
+    if hist:
+        git("add", "data/history.json")
     git("commit", "--quiet", "-m", f"Update usage: team weekly {team}% used")
     git("push", "--quiet", "origin", "HEAD:main")
     sha = git("rev-parse", "--short", "HEAD").stdout.strip()

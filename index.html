@@ -10,65 +10,96 @@
 </head>
 <body>
 <a class="skip" href="#cardsPanel">跳到額度與狀態</a>
-<header class="toolbar">
-  <div class="brand">🏢 AI 辦公室 <span class="ver">v1</span> <span class="count" id="agentCount"></span></div>
-  <div class="tools" role="toolbar" aria-label="辦公室動作">
-    <button type="button" data-act="meeting" title="所有角色到會議室">📋 <span>召集會議</span></button>
-    <button type="button" data-act="work" title="所有角色回到座位">💻 <span>全員回座</span></button>
-    <button type="button" data-act="break" title="所有角色去休息區">☕ <span>休息一下</span></button>
-    <button type="button" data-act="pause" aria-pressed="false">⏸ <span>暫停</span></button>
-    <button type="button" data-act="labels" aria-pressed="true">🏷 <span>名牌</span></button>
-    <button type="button" data-act="reload" title="重新讀取額度與群聊">↻ <span>重新讀取</span></button>
-    <button type="button" data-act="zoom" class="narrow-only" aria-pressed="false">🔍 <span>放大地圖</span></button>
-    <button type="button" data-act="bgm" id="bgmBtn" aria-pressed="false" hidden>🔇 <span>背景音樂</span></button>
-    <button type="button" data-act="bgmNext" id="bgmNextBtn" title="換下一首" hidden>⏭ <span>換歌</span></button>
+<header class="top" id="top">
+  <div class="toolbar">
+    <div class="brand">🏢 AI 辦公室 <span class="ver">v2</span> <span class="count" id="agentCount"></span></div>
+    <div class="tools" role="toolbar" aria-label="辦公室動作">
+      <div class="tgroup" role="group" aria-label="場景行為">
+        <span class="tg-label">場景</span>
+        <button type="button" data-act="meeting" title="所有角色到會議室（約 25 秒後回到自動狀態）">📋 <span>召集會議</span></button>
+        <button type="button" data-act="work" title="所有角色回到座位（約 30 秒後回到自動狀態）">💻 <span>全員回座</span></button>
+        <button type="button" data-act="break" title="所有角色去休息區（約 20 秒後回到自動狀態）">☕ <span>休息一下</span></button>
+        <button type="button" data-act="auto" id="autoBtn" class="auto" aria-pressed="true">🤖 <span>自動狀態</span></button>
+      </div>
+      <div class="tgroup" role="group" aria-label="模擬與同步">
+        <span class="tg-label">模擬</span>
+        <button type="button" data-act="pause" aria-pressed="false">⏸ <span>暫停</span></button>
+        <button type="button" data-act="reload" title="重新讀取額度快照與群聊">↻ <span>重新讀取</span></button>
+        <button type="button" data-act="labels" aria-pressed="true">🏷 <span>名牌</span></button>
+        <button type="button" data-act="zoom" class="narrow-only" aria-pressed="false">🔍 <span>放大地圖</span></button>
+      </div>
+      <div class="tgroup player" role="group" aria-label="背景音樂">
+        <span class="tg-label">音樂</span>
+        <button type="button" data-act="bgm" id="bgmBtn" aria-pressed="false" hidden>🔇 <span>背景音樂</span></button>
+        <button type="button" data-act="bgmNext" id="bgmNextBtn" title="換下一首" hidden>⏭ <span>換歌</span></button>
+        <span class="bgm-now" id="bgmNow" hidden></span>
+      </div>
+    </div>
+    <div class="hstatus">
+      <span class="health-pill" id="healthPill" role="status" hidden></span>
+      <span class="datasrc" id="snapStamp">額度資料載入中…</span>
+    </div>
   </div>
-  <div class="datasrc" id="dataSrc" role="status">額度資料載入中…</div>
+  <div id="alertBanner" class="alert-banner" role="status" hidden></div>
 </header>
 
 <main class="layout">
   <section class="stage">
     <div class="map-wrap" id="mapWrap">
-      <canvas id="office" role="img" aria-label="像素風 AI 辦公室地圖：10 位 AI 夥伴在各部門走動。點角色可看詳細資訊；也可以用下方卡片選擇角色。"></canvas>
-      <div id="popover" class="popover" role="dialog" aria-modal="false" aria-labelledby="pvName" hidden></div>
+      <canvas id="office" role="img" aria-label="像素風 AI 辦公室地圖（8 個房間）：10 位 AI 夥伴依真實額度與群聊資料在各部門工作、交接與休息。點角色可在右側「角色詳情」看資訊；也可以用下方卡片選擇角色。"></canvas>
+      <button type="button" class="map-chip" id="mapChip" hidden></button>
+    </div>
+    <div class="replay" id="replay" role="group" aria-label="今日時間軸回放">
+      <b class="rp-title">🕒 今日時間軸</b>
+      <button type="button" id="rpPlay" class="rp-btn">▶ <span>播放</span></button>
+      <div class="rp-track"><div class="rp-ticks" id="rpTicks" aria-hidden="true"></div><input type="range" id="rpRange" min="0" max="0" value="0" step="1" aria-label="選擇要回放的快照"></div>
+      <span class="rp-time" id="rpTime">即時</span>
+      <button type="button" id="rpLive" class="rp-btn live on" aria-pressed="true">● <span>即時</span></button>
+      <span class="rp-info muted" id="rpInfo"></span>
     </div>
     <section class="panel cards-panel" id="cardsPanel" tabindex="-1">
       <div class="panel-head">
-        <h2>Agent 狀態與額度</h2>
-        <span class="badge demo" id="usageBadge">示範資料</span>
+        <h2>額度總覽</h2>
+        <span class="badge demo" id="usageBadge" hidden>示範資料</span>
         <span class="badge live" id="usageLive" hidden>真實用量</span>
-        <span class="muted" id="usageUpdated"></span>
+        <span class="legend-tiers" aria-label="色階說明"><i class="g"></i>&lt; 70% <i class="a"></i>70–85% <i class="r"></i>&gt; 85% <i class="s"></i>資料過期</span>
       </div>
-      <div id="teamUsage" class="team-usage" hidden></div>
-      <div id="subsWrap" class="subs-wrap" hidden>
-        <div class="subs-head" id="subsHead"></div>
-        <div class="subs-usage" id="subsUsage"></div>
-      </div>
+      <div class="snap-layers" id="snapLayers"></div>
       <div id="usageAlert" class="alert" role="status" hidden></div>
+      <div id="poolGrid" class="pool-grid"></div>
+      <div class="panel-head agents-head"><h2>Agent 狀態</h2><span class="muted">依部門排列 · 點卡片看右側角色詳情</span></div>
       <div id="cards" class="cards"></div>
     </section>
   </section>
 
-  <aside class="sidebar">
-    <section class="panel agent-list" aria-label="Agent 列表">
-      <div class="panel-head"><h2>Agent 列表</h2></div>
-      <ul id="agentList"></ul>
-    </section>
-    <section class="panel chat" id="chatPanel" aria-label="全員群聊（唯讀）">
-      <div class="panel-head"><h2>全員群聊</h2><span class="badge live">真實對話</span><span class="muted" id="chatUpdated"></span></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="tabs" role="tablist" aria-label="側欄">
+      <button type="button" role="tab" id="tab-chat" data-tab="chat" aria-selected="true" aria-controls="panel-chat">💬 全員群聊</button>
+      <button type="button" role="tab" id="tab-detail" data-tab="detail" aria-selected="false" aria-controls="panel-detail" tabindex="-1">👤 角色詳情</button>
+    </div>
+    <section class="panel chat" id="panel-chat" role="tabpanel" aria-labelledby="tab-chat">
+      <div class="panel-head"><span class="badge ro">🔒 唯讀監控</span><span class="muted" id="chatUpdated"></span></div>
+      <div class="cmd-wrap"><span class="muted">一鍵複製指令，到 Grok Bot 貼上：</span><div class="cmd-chips" id="cmdChips"></div></div>
       <div id="chatAlert" class="alert" role="status" hidden></div>
       <div id="chatLog" class="chat-log" aria-live="polite" tabindex="0" aria-label="群聊紀錄"></div>
-      <div class="chat-foot">🔒 唯讀：群聊由 Hank 在 Grok Bot 發話，夥伴的真實回覆會自動顯示在這裡（每 30 秒更新）</div>
+      <div class="chat-foot">🔒 唯讀監控：網站只顯示紀錄、不能發話，也不會呼叫任何 AI。Hank 在 Grok Bot 說「群聊：…」或「@名字 …」，夥伴的真實回覆會自動出現在這裡。</div>
+    </section>
+    <section class="panel detail" id="panel-detail" role="tabpanel" aria-labelledby="tab-detail" hidden>
+      <div class="detail-picker" id="detailPicker"></div>
+      <div class="detail-body" id="detailBody"></div>
     </section>
   </aside>
 </main>
-<footer>AI 辦公室 · 額度約每 2 小時由 Grok Bot 用量報告同步（<a href="data/usage.json">usage.json</a>），Codex 額度由小沼王自己回報 · Claude / Gemini 訂閱用量見 <a href="data/subscriptions.json">subscriptions.json</a>，Gemini API 免費額度見 <a href="data/gemini.json">gemini.json</a>，OpenAI API 花費見 <a href="data/openai.json">openai.json</a> · 群聊為<b>真實對話紀錄</b>（<a href="data/chat.json">chat.json</a>）· 時間皆為台北時間<span id="artCredit" hidden></span><span id="bgmCredit" hidden></span></footer>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<footer>AI 辦公室 v2 · 唯讀監控：額度約每 2 小時由 Grok Bot 用量報告同步（<a href="data/usage.json">usage.json</a>），Codex 額度由小沼王自己回報 · Claude / Gemini 訂閱用量見 <a href="data/subscriptions.json">subscriptions.json</a>，Gemini API 免費額度見 <a href="data/gemini.json">gemini.json</a>，OpenAI API 花費見 <a href="data/openai.json">openai.json</a>，時間軸快照見 <a href="data/history.json">history.json</a> · 群聊為<b>真實對話紀錄</b>（<a href="data/chat.json">chat.json</a>）· 時間皆為台北時間<span id="artCredit" hidden></span><span id="bgmCredit" hidden></span></footer>
 
 <script src="js/config.js"></script>
 <script src="js/usage-demo.js"></script>
 <script src="js/sprites.js"></script>
 <script src="js/office.js"></script>
 <script src="js/codex-state.js"></script>
+<script src="js/pools.js"></script>
+<script src="js/director.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-11-26T17:13:21+08:00",
+  "keep_hours": 48,
+  "note": "AI 辦公室額度快照（scripts/record_snapshot.py 產生；只含百分比、花費統計與時間，不含提示、輸出或金鑰）",
+  "openai_daily": {"2026-11-26": 1.517928},
+  "snapshots": [
+    {"t":"2026-11-26T17:13:21+08:00","pools":{"team":33.9,"codex":30,"claude":6,"claude_5h":0,"gemini_sub":1,"gemini_cur":0,"gemini_api":0,"openai":11.83},"stale":[],"openai_today":1.5179,"openai_month":11.24,"active":["codex-xiao-zhaowang"],"top":[["jiantou-xiao-zhaowang",11.0],["au-penguin",10.0],["grok-bot",6.0]],"worst":["team",33.9],"team":{"used":33.9,"reset_at":"2026-11-28T23:44:00+08:00","updated_at":"2026-11-26T16:17:14+08:00"},"shares":{"da-zhuren":{"share":4.0,"label":"4","used":1.36},"xiao-zhuren":{"share":5.0,"label":"5","used":1.7},"codex-xiao-zhaowang":{"share":5.0,"label":"5","used":1.7},"da-zhaowang":{"share":4.0,"label":"4","used":1.36},"zhaowang-xiaobao":{"share":0.5,"label":"<1","used":0.17},"jiantou-xiao-zhaowang":{"share":11.0,"label":"11","used":3.73},"grok-bot":{"share":6.0,"label":"6","used":2.03},"au-penguin":{"share":10.0,"label":"10","used":3.39}},"codex":{"used":30.0,"limit":100,"reset_at":"2026-12-02T04:01:57+08:00","updated_at":"2026-11-26T15:15:59+08:00","stale":false,"connected":true,"reported":true,"slot":"primary","window":"primary"},"subs":{"updated_at":"2026-11-26T12:15:35+08:00","claude":{"plan":"Pro","session_pct":0,"weekly_pct":6,"weekly_reset":"2026-11-29T23:00:00+08:00","claude_code_weekly_pct":0,"status":"Fresh week"},"gemini":{"plan":"Google AI Pro","current_pct":0,"current_reset":"2026-11-26T16:54:00+08:00","weekly_pct":1,"weekly_reset":"2026-12-01T10:54:00+08:00"}},"gemini_api":{"model":"gemini-3.5-flash-lite","requests_today":20,"daily_cap":300,"day_reset_at":"2026-11-18T16:00:00+08:00","last_run_at":"2026-11-18T01:12:19+08:00","last_status":"ok"},"openai":{"model":"gpt-6.2-astra","requests_today":16,"spend_today_usd":1.517928,"spend_month_usd":11.239956,"monthly_cap_usd":95.0,"month_reset_at":"2026-12-01T00:00:00+08:00","last_run_at":"2026-11-26T10:53:32+08:00","last_status":"ok"}}
+  ]
+}
