@@ -2,12 +2,12 @@
   "schema_version": 1,
   "is_demo": false,
   "source": "Grok Bot 用量報告（每小時更新）",
-  "generated_at": "2026-11-26T10:23:18+08:00",
+  "generated_at": "2026-11-26T12:19:24+08:00",
   "updated_by": "澳洲企鵝",
   "team": {
     "provider": "grok-bot",
     "window": "weekly",
-    "used_pct": 32.5,
+    "used_pct": 32.8,
     "limit": 100,
     "unit": "%",
     "reset_at": "2026-11-28T23:44:00+08:00"
@@ -18,7 +18,7 @@
   "entries": [
     {
       "agent_id": "team",
-      "used": 32.5,
+      "used": 32.8,
       "scope": "team",
       "note": "整個團隊共用的 Grok Bot 每週額度",
       "provider": "grok-bot",
@@ -26,12 +26,12 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-28T23:44:00+08:00",
-      "updated_at": "2026-11-26T10:23:18+08:00",
+      "updated_at": "2026-11-26T12:19:24+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
       "agent_id": "da-zhuren",
-      "used": 1.3,
+      "used": 1.31,
       "share_pct": 4.0,
       "share_label": "4",
       "report_name": "大主人-電機專案經理",
@@ -42,12 +42,12 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-28T23:44:00+08:00",
-      "updated_at": "2026-11-26T10:23:18+08:00",
+      "updated_at": "2026-11-26T12:19:24+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
       "agent_id": "xiao-zhuren",
-      "used": 1.62,
+      "used": 1.64,
       "share_pct": 5.0,
       "share_label": "5",
       "report_name": "小主人-電機繪圖專家",
@@ -58,12 +58,12 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-28T23:44:00+08:00",
-      "updated_at": "2026-11-26T10:23:18+08:00",
+      "updated_at": "2026-11-26T12:19:24+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
       "agent_id": "codex-xiao-zhaowang",
-      "used": 1.62,
+      "used": 1.64,
       "share_pct": 5.0,
       "share_label": "5",
       "report_name": "codex -小沼王",
@@ -74,7 +74,7 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-28T23:44:00+08:00",
-      "updated_at": "2026-11-26T10:23:18+08:00",
+      "updated_at": "2026-11-26T12:19:24+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
@@ -113,7 +113,7 @@
     },
     {
       "agent_id": "da-zhaowang",
-      "used": 1.3,
+      "used": 1.31,
       "share_pct": 4.0,
       "share_label": "4",
       "report_name": "大沼王-漫畫家",
@@ -124,7 +124,7 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-28T23:44:00+08:00",
-      "updated_at": "2026-11-26T10:23:18+08:00",
+      "updated_at": "2026-11-26T12:19:24+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
@@ -140,28 +140,28 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-28T23:44:00+08:00",
-      "updated_at": "2026-11-26T10:23:18+08:00",
+      "updated_at": "2026-11-26T12:19:24+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
       "agent_id": "jiantou-xiao-zhaowang",
-      "used": 3.25,
-      "share_pct": 10.0,
-      "share_label": "10",
+      "used": 2.95,
+      "share_pct": 9.0,
+      "share_label": "9",
       "report_name": "尖頭小沼王-音樂家",
       "connected": true,
-      "note": "佔團隊 Grok Bot 用量 10%；used = 佔團隊每週額度的百分比",
+      "note": "佔團隊 Grok Bot 用量 9%；used = 佔團隊每週額度的百分比",
       "provider": "grok-bot",
       "window": "weekly",
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-28T23:44:00+08:00",
-      "updated_at": "2026-11-26T10:23:18+08:00",
+      "updated_at": "2026-11-26T12:19:24+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
       "agent_id": "grok-bot",
-      "used": 2.27,
+      "used": 2.3,
       "share_pct": 7.0,
       "share_label": "7",
       "report_name": "Grok Bot",
@@ -172,12 +172,12 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-28T23:44:00+08:00",
-      "updated_at": "2026-11-26T10:23:18+08:00",
+      "updated_at": "2026-11-26T12:19:24+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
       "agent_id": "au-penguin",
-      "used": 3.25,
+      "used": 3.28,
       "share_pct": 10.0,
       "share_label": "10",
       "report_name": "澳洲企鵝🐧-AI 辦公室城市設計師",
@@ -188,7 +188,7 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-28T23:44:00+08:00",
-      "updated_at": "2026-11-26T10:23:18+08:00",
+      "updated_at": "2026-11-26T12:19:24+08:00",
       "updated_by": "澳洲企鵝"
     }
   ]
