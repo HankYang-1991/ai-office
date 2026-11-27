@@ -77,6 +77,7 @@ window.OFFICE_CONFIG = {
     { type: 'shelf', x: 2, y: 6, w: 1, h: 2 },
     { type: 'vending', x: 12, y: 9, w: 1, h: 1 },
     { type: 'coffee', x: 13, y: 9, w: 1, h: 1 },
+    { type: 'arcade', x: 2, y: 9, w: 1, h: 2, label: '沼王跳跳樂' },   // 像素街機：點一下開小遊戲
     { type: 'rug', x: 8, y: 6, w: 4, h: 3, blocking: false },
     // 會議室
     { type: 'whiteboard', x: 9, y: 15, w: 4, h: 1 },
@@ -159,6 +160,7 @@ window.OFFICE_CONFIG = {
     shelf:   { label: '在書櫃前翻書', tiles: [[3,7],[3,6]] },
     vending: { label: '在販賣機買飲料', tiles: [[12,10],[13,10],[11,10]] },
     sofa:    { label: '在沙發上休息', tiles: [[9,3],[10,3],[11,3],[12,3]] },
+    arcade:  { label: '在街機前玩沼王跳跳樂', tiles: [[3,10],[3,9]] },
   },
   chargeSpots: [[9,3],[10,3],[11,3],[12,3],[12,10],[13,10],[11,10],[8,3]],
 

@@ -123,6 +123,15 @@
         for (const [qx, qy] of [[px + 2, py + 2], [px + w / 2 - 1, py + 1], [px + w - 4, py + 2], [px + 2, py + h - 4], [px + w / 2 - 1, py + h - 3], [px + w - 4, py + h - 4]]) R(m, qx, qy, 2, 2, '#111');
         [['#fff', 12, 14], ['#e74c3c', 40, 12], ['#f1c40f', 43, 15], ['#3498db', 46, 12], ['#111', 44, 18]].forEach(([c, bx, by]) => R(m, px + bx, py + by, 2, 2, c));
         R(m, px + 14, py + 15, 20, 1, '#d9b38c'); break;
+      case 'arcade': // 像素街機（螢幕在 drawLive 動態繪製）
+        R(m, px + 1, py + h - 2, w - 2, 3, 'rgba(0,0,0,.25)');
+        R(m, px + 1, py - 7, w - 2, h + 6, '#3a2a6e'); R(m, px + 1, py - 7, 2, h + 6, '#5a46a8'); R(m, px + w - 3, py - 7, 2, h + 6, '#2a1f52');
+        R(m, px + 2, py - 6, w - 4, 5, '#ffd65a'); R(m, px + 4, py - 5, 2, 2, '#e85d4a'); R(m, px + 7, py - 5, 2, 2, '#3d7fb0'); R(m, px + 10, py - 5, 2, 2, '#2c8f4a');
+        R(m, px + 2, py, w - 4, 11, '#0b0e19'); R(m, px + 3, py + 1, w - 6, 9, '#9fdcf0');
+        R(m, px, py + 11, w, 4, '#2a1f52'); R(m, px, py + 11, w, 1, '#6a56b8');
+        R(m, px + 4, py + 10, 1, 3, '#222'); R(m, px + 3, py + 9, 3, 2, '#ff5f57'); R(m, px + 9, py + 12, 2, 1, '#4cd964'); R(m, px + 12, py + 12, 2, 1, '#ffd65a');
+        R(m, px + 3, py + 16, w - 6, 12, '#2e225c'); R(m, px + 6, py + 19, 4, 3, '#ffd65a'); R(m, px + 7, py + 20, 2, 1, '#111');
+        R(m, px + 4, py + 24, w - 8, 1, '#5a46a8'); break;
       case 'sofa':
         R(m, px, py, w, h, '#2f8f9d'); R(m, px, py, w, 5, '#246f7a'); R(m, px, py, 3, h, '#246f7a'); R(m, px + w - 3, py, 3, h, '#246f7a');
         for (let i = 1; i < f.w; i++) R(m, px + i * T, py + 6, 1, 8, '#246f7a'); break;
@@ -497,6 +506,13 @@
         ctx.save(); ctx.beginPath(); ctx.rect(px + 1, py - 2, w - 2, 8); ctx.clip();
         for (let i = 0; i < 12; i++) { const x = px + w - tx + i * 14; const up = hash(i + Math.floor(now / 9000)) > 0.45; R(ctx, x, py + 1, 6, 2, up ? '#3ecf8e' : '#ff5f57'); R(ctx, x + 7, py, 2, 1, up ? '#3ecf8e' : '#ff5f57'); R(ctx, x + 7, py + 3, 2, 1, '#ffd65a'); }
         ctx.restore();
+      } else if (f.type === 'arcade') {   // 街機螢幕：迷你沼王在跳台
+        const b = Math.round(Math.abs(Math.sin(now / 260)) * 4), sx = px + 3, sy = py + 1;
+        R(ctx, sx, sy, 10, 9, '#9fdcf0'); R(ctx, sx, sy + 6, 10, 3, '#bfe8f4');
+        R(ctx, sx + 1, sy + 8, 4, 1, '#4cbf5a'); R(ctx, sx + 6, sy + 4, 4, 1, '#4cbf5a'); R(ctx, sx + 2, sy + 2, 3, 1, '#ff5f57');
+        R(ctx, sx + 2, sy + 5 - b, 2, 3, '#5a9fd6'); R(ctx, sx + 2, sy + 5 - b, 1, 1, '#1a1a2a');
+        if (arcadeHover || Math.floor(now / 700) % 2) R(ctx, sx + 7, sy + 1, 2, 1, '#ffd65a');
+        if (arcadeHover) { R(ctx, px, py - 8, w, 1, '#ffd65a'); R(ctx, px, py - 8, 1, f.h * T + 8, '#ffd65a'); R(ctx, px + w - 1, py - 8, 1, f.h * T + 8, '#ffd65a'); }
       } else if (f.type === 'poolrack') {
         const p = pools[f.pool] || null, t = p ? (p.stale ? 'stale' : p.tier) : 'na';
         const lit = p && typeof p.used === 'number' ? Math.max(1, Math.ceil(p.used / 12.5)) : 0;
@@ -582,6 +598,11 @@
       const p = pools[f.pool]; const lab = (p && p.short) || f.pool;
       pill(dctx, lab, (f.x + f.w / 2) * T * s, (f.y + f.h) * T * s + 1, fs * 0.62, 'rgba(10,13,24,.85)', '#c9d0e6', TIER_LED[p ? (p.stale ? 'stale' : p.tier) : 'na']);
     }
+    for (const f of arcades) {   // 街機名牌：滑過時顯示完整提示
+      const ax = (f.x + f.w / 2) * T * s, ay = (f.y - 0.55) * T * s;
+      if (arcadeHover === f) pill(dctx, (f.label || '小遊戲') + ' ▶ 點我玩', ax + 3 * T * s / 2, ay - fs * 0.6, fs * 0.95, '#ffd65a', '#1a1a1a', '#7a5cc8', '#1a1a1a');
+      else if (showLabels) pill(dctx, '街機', ax, ay - fs * 0.1, fs * 0.7, 'rgba(58,42,110,.92)', '#ffe08a', '#ffd65a');
+    }
     const sorted = agents.slice().sort((a, b) => a.y - b.y);
     for (const a of sorted) {
       const cx = (a.x * T + 8) * s, sel = a.id === selectedId;
@@ -631,17 +652,32 @@
     }
     return best;
   }
+  const arcades = C.furniture.filter(f => f.type === 'arcade');
+  let arcadeHover = null;
+  const arcadeHooks = [];
+  function arcadeAt(clientX, clientY, touch) {
+    const rect = canvas.getBoundingClientRect();
+    const wx = (clientX - rect.left) / rect.width * WW, wy = (clientY - rect.top) / rect.height * WH, pad = touch ? 5 : 1;
+    return arcades.find(f => wx >= f.x * T - pad && wx <= (f.x + f.w) * T + pad && wy >= f.y * T - 8 - pad && wy <= (f.y + f.h) * T + pad) || null;
+  }
   function select(id, from) { selectedId = id; selectHooks.forEach(fn => fn(id, from)); }
   function init(el) {
     canvas = el; dctx = canvas.getContext('2d');
     new ResizeObserver(resize).observe(canvas); resize();
     canvas.addEventListener('pointerup', e => {
       const a = hitTest(e.clientX, e.clientY, e.pointerType !== 'mouse');
-      if (a) select(a.id, 'map');
+      if (a) { select(a.id, 'map'); return; }
+      const f = arcadeAt(e.clientX, e.clientY, e.pointerType !== 'mouse');
+      if (f) arcadeHooks.forEach(fn => fn(f));
     });
     canvas.addEventListener('pointermove', e => {
-      if (e.pointerType === 'mouse') canvas.style.cursor = hitTest(e.clientX, e.clientY, false) ? 'pointer' : 'default';
+      if (e.pointerType !== 'mouse') return;
+      const a = hitTest(e.clientX, e.clientY, false), f = a ? null : arcadeAt(e.clientX, e.clientY, false);
+      arcadeHover = f;
+      canvas.style.cursor = a || f ? 'pointer' : 'default';
+      canvas.title = f ? '點一下開啟小遊戲「' + (f.label || '小遊戲') + '」' : '';
     });
+    canvas.addEventListener('pointerleave', () => { arcadeHover = null; canvas.style.cursor = 'default'; });
     rafId = requestAnimationFrame(loop);
   }
   // 交接：走到目標同事的座位旁停 2 秒，再回來
@@ -658,7 +694,7 @@
   window.Office = {
     init, setActive, agents, byId, statusOf, activityOf, STATUS, seats,
     select, getSelected: () => selectedId,
-    onSelect: fn => selectHooks.push(fn), onFrame: fn => frameHooks.push(fn),
+    onSelect: fn => selectHooks.push(fn), onFrame: fn => frameHooks.push(fn), onArcade: fn => arcadeHooks.push(fn),
     setState: (id, st, stay, o) => byId[id] && setState(byId[id], st, stay, o),
     setAll: (st, stay) => agents.forEach(a => { a.manual = Date.now() + (stay || 20) * 1000; setState(a, st, stay); }),
     setBrain: fn => { brain = fn; },

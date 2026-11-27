@@ -34,6 +34,10 @@
         <button type="button" data-act="bgmNext" id="bgmNextBtn" title="換下一首" hidden>⏭ <span>換歌</span></button>
         <span class="bgm-now" id="bgmNow" hidden></span>
       </div>
+      <div class="tgroup game" role="group" aria-label="小遊戲">
+        <span class="tg-label">遊戲</span>
+        <button type="button" data-act="game" id="gameBtn" class="game-btn" aria-haspopup="dialog" aria-controls="qjModal" title="開啟小遊戲「沼王跳跳樂」（也可以點休息區的像素街機）">🎮 <span>沼王跳跳樂</span></button>
+      </div>
     </div>
     <div class="hstatus">
       <span class="health-pill" id="healthPill" role="status" hidden></span>
@@ -90,6 +94,55 @@
     </section>
   </aside>
 </main>
+<div class="qj-modal" id="qjModal" role="dialog" aria-modal="true" aria-labelledby="qjHeading" hidden>
+  <div class="qj-panel">
+    <div class="qj-head">
+      <h2 id="qjHeading">🎮 沼王跳跳樂</h2>
+      <span class="qj-sub">休息區街機 · 往上跳！</span>
+      <button type="button" class="qj-icon" id="qjMute" aria-pressed="true" title="音效">🔊</button>
+      <button type="button" class="qj-icon" id="qjClose" title="關閉（Esc）" aria-label="關閉遊戲">✕</button>
+    </div>
+    <div class="qj-stage">
+      <canvas id="qjCanvas" width="360" height="640" tabindex="0" aria-label="沼王跳跳樂遊戲畫面：用左右方向鍵、A／D 鍵、拖曳畫面或下方按鈕控制角色左右移動"></canvas>
+      <div class="qj-hud" hidden>
+        <span>分數 <b id="qjScore">0</b></span>
+        <span>高度 <b id="qjFloor">0F</b></span>
+        <span class="qj-boost" id="qjBoost" hidden>☕ 加速中</span>
+        <span>最高 <b id="qjBest">0</b></span>
+      </div>
+      <div class="qj-ov" id="qjTitle">
+        <div class="qj-logo">沼王<em>跳跳樂</em></div>
+        <p class="qj-tip">選一位夥伴，一路往上跳！</p>
+        <div class="qj-chars" id="qjChars" role="radiogroup" aria-label="選擇角色"></div>
+        <button type="button" class="qj-go" id="qjStart">▶ 開始（<span id="qjStartName">大沼王</span>）</button>
+        <ul class="qj-legend">
+          <li><i class="lg n"></i>沼澤平台</li><li><i class="lg s"></i>彈簧超級跳</li><li><i class="lg m"></i>會移動</li><li><i class="lg f"></i>易碎，只能踩一次</li>
+          <li>☕ +50 加速　★ +100</li><li><i class="lg c"></i>額度警報雲：從上面踩爆 +150，撞到就出局</li>
+        </ul>
+        <p class="qj-keys">← → 或 A／D 移動 · 拖曳畫面 · Space／Enter 開始 · P 暫停 · Esc 關閉</p>
+        <p class="qj-credit">玩法數值：量化分析師（OpenAI gpt-6.2-astra）設計 · 角色：大沼王-漫畫家 · 整合：澳洲企鵝</p>
+      </div>
+      <div class="qj-ov" id="qjOver" hidden>
+        <div class="qj-logo sm">GAME OVER</div>
+        <div class="qj-record" id="qjOvRecord" hidden>🏆 新紀錄！</div>
+        <dl class="qj-res"><dt>分數</dt><dd id="qjOvScore">0</dd><dt>高度</dt><dd id="qjOvFloor">0F</dd><dt>最高分</dt><dd id="qjOvBest">0</dd></dl>
+        <button type="button" class="qj-go" id="qjAgain">↻ 再玩一次</button>
+        <button type="button" class="qj-alt" id="qjChange">換角色</button>
+        <p class="qj-keys">Space／Enter 立即重來</p>
+      </div>
+      <div class="qj-ov" id="qjPaused" hidden>
+        <div class="qj-logo sm">暫停中</div>
+        <button type="button" class="qj-go" id="qjResume">▶ 繼續</button>
+        <button type="button" class="qj-alt" id="qjRestart">↻ 重新開始</button>
+      </div>
+    </div>
+    <div class="qj-pad" aria-label="觸控按鈕">
+      <button type="button" class="qj-dir" id="qjLeft" aria-label="向左">◀</button>
+      <span class="qj-padtip">按住左右移動</span>
+      <button type="button" class="qj-dir" id="qjRight" aria-label="向右">▶</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <footer>AI 辦公室 v2 · 唯讀監控：額度約每 2 小時由 Grok Bot 用量報告同步（<a href="data/usage.json">usage.json</a>），Codex 額度由小沼王自己回報 · Claude / Gemini 訂閱用量見 <a href="data/subscriptions.json">subscriptions.json</a>，Gemini API 免費額度見 <a href="data/gemini.json">gemini.json</a>，OpenAI API 花費見 <a href="data/openai.json">openai.json</a>，時間軸快照見 <a href="data/history.json">history.json</a> · 群聊為<b>真實對話紀錄</b>（<a href="data/chat.json">chat.json</a>）· 時間皆為台北時間<span id="artCredit" hidden></span><span id="bgmCredit" hidden></span></footer>
 
@@ -100,6 +153,7 @@
 <script src="js/codex-state.js"></script>
 <script src="js/pools.js"></script>
 <script src="js/director.js"></script>
+<script src="js/quagsire-jump.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

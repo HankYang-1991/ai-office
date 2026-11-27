@@ -598,6 +598,7 @@
       case 'zoom': { const z = $('#mapWrap').classList.toggle('zoomed'); setBtn(b, '🔍', z ? '符合寬度' : '放大地圖', z); break; }
       case 'bgm': Bgm.toggle(); break;
       case 'bgmNext': Bgm.next(); break;
+      case 'game': if (window.QuagsireJump) window.QuagsireJump.open(b); break;
     }
   });
 
@@ -712,12 +713,14 @@
   setInterval(() => { if (!document.hidden) loadAll(); }, (C.usagePollSec || 60) * 1000);
   let hiddenAt = 0;
   document.addEventListener('visibilitychange', () => {
-    O.setActive(!document.hidden);
+    O.setActive(!document.hidden && !(window.QuagsireJump && window.QuagsireJump.isOpen()));   // 小遊戲開著時地圖維持暫停
     if (document.hidden) { hiddenAt = Date.now(); return; }
     if (Date.now() - hiddenAt > 20000) { loadChat(); loadAll(); }
     tickStatus(true);
   });
   setInterval(() => tickStatus(false), 400);
+  // 休息區的像素街機：點一下開啟「沼王跳跳樂」
+  if (O.onArcade) O.onArcade(() => { if (window.QuagsireJump) window.QuagsireJump.open($('#gameBtn')); });
   setInterval(() => { if (!document.hidden && Replay.idx < 0 && lastBundle) { renderStamps(lastBundle, lastBuilt); } }, 30000);
 
   // 對外 API（唯讀；網站不接受任何輸入、不呼叫 AI API）
