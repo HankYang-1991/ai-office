@@ -78,40 +78,6 @@
       "updated_by": "澳洲企鵝"
     },
     {
-      "agent_id": "codex-xiao-zhaowang",
-      "provider": "openai-codex",
-      "window": "primary",
-      "used": 39.0,
-      "limit": 100,
-      "unit": "%",
-      "reset_at": "2026-12-02T04:01:57+08:00",
-      "updated_at": "2026-11-27T08:08:51+08:00",
-      "updated_by": "codex-小沼王",
-      "connected": true,
-      "scope": "own",
-      "stale": false,
-      "slot": "primary",
-      "reported": true,
-      "note": "OpenAI Codex 獨立額度（不算在團隊額度內）"
-    },
-    {
-      "agent_id": "codex-xiao-zhaowang",
-      "provider": "openai-codex",
-      "window": "secondary",
-      "used": 0,
-      "limit": null,
-      "unit": "%",
-      "reset_at": null,
-      "updated_at": "2026-11-27T08:08:51+08:00",
-      "updated_by": "codex-小沼王",
-      "connected": false,
-      "scope": "own",
-      "stale": false,
-      "slot": "secondary",
-      "reported": false,
-      "note": "Codex 尚未回報這個時段的額度"
-    },
-    {
       "agent_id": "da-zhaowang",
       "used": 1.98,
       "share_pct": 5.0,
@@ -221,6 +187,40 @@
       "reset_at": "2026-11-28T23:44:00+08:00",
       "updated_at": "2026-11-27T16:17:10+08:00",
       "updated_by": "澳洲企鵝"
+    },
+    {
+      "agent_id": "codex-xiao-zhaowang",
+      "provider": "openai-codex",
+      "window": "primary",
+      "used": 44.0,
+      "limit": 100,
+      "unit": "%",
+      "reset_at": "2026-12-02T04:01:57+08:00",
+      "updated_at": "2026-11-27T18:15:26+08:00",
+      "updated_by": "codex-小沼王",
+      "connected": true,
+      "scope": "own",
+      "stale": false,
+      "slot": "primary",
+      "reported": true,
+      "note": "OpenAI Codex 獨立額度（不算在團隊額度內）"
+    },
+    {
+      "agent_id": "codex-xiao-zhaowang",
+      "provider": "openai-codex",
+      "window": "secondary",
+      "used": 0,
+      "limit": null,
+      "unit": "%",
+      "reset_at": null,
+      "updated_at": "2026-11-27T18:15:26+08:00",
+      "updated_by": "codex-小沼王",
+      "connected": false,
+      "scope": "own",
+      "stale": false,
+      "slot": "secondary",
+      "reported": false,
+      "note": "Codex 尚未回報這個時段的額度"
     }
   ]
 }
