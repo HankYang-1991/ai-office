@@ -186,21 +186,8 @@
   function agentRows(id, B, built, detailed) {
     const pools = Object.fromEntries(built.pools.map(p => [p.id, p]));
     const u = B.usage || { entries: [] }, rows = [];
-    if (id === 'gpt') {
-      const p = pools.openai; if (!p) return '<div class="u-empty">尚無 OpenAI 花費資料</div>';
-      rows.push(poolRow(p, { name: 'OpenAI API 本月', meta: `今日 ${fmtUsd(p.today)} · ${resetMeta(p.reset, detailed)}`, raw: p.raw }));
-      if (detailed && B.openai) rows.push(`<div class="u-meta">${esc(B.openai.model)} · 上次執行 ${fmtDate(B.openai.last_run_at)} · 無每日上限、每月硬上限 $${B.openai.monthly_cap_usd}</div>`);
-      return rows.join('');
-    }
-    if (id === 'gemini') {
-      const p = pools.gemini_api; if (!p) return '<div class="u-empty">尚無 Gemini API 資料</div>';
-      rows.push(poolRow(p, { meta: p.reset ? resetMeta(p.reset, detailed) : (p.note ? esc(p.note) : '今日尚未使用') }));
-      if (detailed && B.gemini) rows.push(`<div class="u-meta">${esc(B.gemini.model)} · 上次執行 ${fmtDate(B.gemini.last_run_at)} · 與 Google AI Pro 訂閱分開</div>`);
-      return rows.join('');
-    }
     const list = (u.entries || []).filter(e => e.agent_id === id);
-    if (!list.length) return '<div class="u-empty">尚無額度資料</div>';
-    if (u.is_demo) {   // 讀不到真實資料時的示範數字（同樣換成已用 %）
+    if (u.is_demo && list.length) {   // 讀不到真實資料時的示範數字（同樣換成已用 %）
       return list.map(e => qRow({ name: `${e.provider} · ${e.window}`, used: e.limit ? e.used / e.limit * 100 : null, raw: `${fmtNum(e.used)} / ${fmtNum(e.limit)} ${esc(e.unit || '')}`, meta: resetMeta(e.reset_at), tag: tag('demo', '示範') })).join('');
     }
     const team = pools.team, share = list.find(e => e.provider === 'grok-bot' && typeof e.share_pct === 'number' && e.connected !== false);
@@ -210,6 +197,23 @@
         raw: `佔全隊 ${label}`, meta: `池已用 ${fmtPct(team.used)}${detailed ? ' · ' + resetMeta(team.reset, true) : ''}`, aria: `${cfgById[id].name} 佔團隊每週額度`,
         tag: team.stale ? tag('stale', '資料過期') : '' }));
     }
+    if (id === 'gpt') {
+      const p = pools.openai;
+      if (p) {
+        rows.push(poolRow(p, { name: 'OpenAI API 本月', meta: `今日 ${fmtUsd(p.today)} · ${resetMeta(p.reset, detailed)}`, raw: p.raw }));
+        if (detailed && B.openai) rows.push(`<div class="u-meta">${esc(B.openai.model)} · 上次執行 ${fmtDate(B.openai.last_run_at)} · 無每日上限、每月硬上限 $${B.openai.monthly_cap_usd}</div>`);
+      }
+      return rows.join('') || '<div class="u-empty">尚無額度資料</div>';
+    }
+    if (id === 'gemini') {
+      const p = pools.gemini_api;
+      if (p) {
+        rows.push(poolRow(p, { meta: p.reset ? resetMeta(p.reset, detailed) : (p.note ? esc(p.note) : '今日尚未使用') }));
+        if (detailed && B.gemini) rows.push(`<div class="u-meta">${esc(B.gemini.model)} · 上次執行 ${fmtDate(B.gemini.last_run_at)} · 與 Google AI Pro 訂閱分開</div>`);
+      }
+      return rows.join('') || '<div class="u-empty">尚無額度資料</div>';
+    }
+    if (!list.length) return '<div class="u-empty">尚無額度資料</div>';
     if (id === 'codex-xiao-zhaowang') {
       const ce = list.find(e => e.scope === 'own' && (e.slot === 'primary' || e.window === 'primary'));
       if (pools.codex) rows.push(poolRow(pools.codex, { name: 'Codex 獨立額度', meta: pools.codex.stale ? '等小沼王下次回報' : resetMeta(pools.codex.reset, detailed) }));

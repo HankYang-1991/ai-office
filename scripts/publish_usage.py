@@ -28,8 +28,8 @@ UPDATED_BY = "澳洲企鵝"
 PROVIDER = "grok-bot"
 # 不在 Grok Bot 用量報告裡的 Agent（例如在 Hank 筆電上跑的 OpenAI Codex）
 NOT_CONNECTED = {"codex-xiao-zhaowang": ("codex", "OpenAI Codex，在 Hank 的筆電上執行，尚未接上額度回報")}
-# 有自己額度來源、不寫入 usage.json（避免和卡片上的獨立額度列衝突）
-SKIP_TEAM = {"gemini", "gpt"}  # Gemini 計算員／量化分析師：各自的 data/*.json
+# 量化分析師（gpt）與 Gemini 計算員仍可能出現在 Grok Bot 團隊用量裡，
+# 要跟 Codex 一樣同時寫入團隊佔比；獨立的 OpenAI / Gemini API 額度仍來自各自的 data/*.json。
 CODEX_ID = "codex-xiao-zhaowang"
 CODEX_NAME = "codex-小沼王"
 STALE_HOURS = 24
@@ -187,8 +187,6 @@ def build(report, agents, codex=None):
             mapped[aid] = dict(share=p, names=[rname], raw=str(v))
     for a in agents:
         aid = a["id"]
-        if aid in SKIP_TEAM:
-            continue
         if aid in mapped:
             m = mapped[aid]
             share = round(m["share"], 2)
@@ -262,7 +260,7 @@ def main():
     if push:
         if not os.environ.get("AI_OFFICE_GITHUB_TOKEN"):
             die("沒有設定 AI_OFFICE_GITHUB_TOKEN")
-        git("pull", "--rebase", "--quiet", "origin", "main")
+        git("pull", "--rebase", "--autostash", "--quiet", "origin", "main")
     if not isinstance(report, dict):
         die("輸入必須是 JSON 物件")
     codex_obj = report.get("codex")

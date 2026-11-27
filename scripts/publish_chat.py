@@ -157,7 +157,7 @@ def main():
     if push:
         if not os.environ.get("AI_OFFICE_GITHUB_TOKEN"):
             pu.die("沒有設定 AI_OFFICE_GITHUB_TOKEN")
-        pu.git("pull", "--rebase", "--quiet", "origin", "main")
+        pu.git("pull", "--rebase", "--autostash", "--quiet", "origin", "main")
     agents = pu.load_agents()
     chat = load_chat()
 
@@ -212,7 +212,7 @@ def main():
     pu.git("commit", "--quiet", "-m", f"chat: {summary} — {r['title']}"[:120])
     res = pu.git("push", "--quiet", "origin", "HEAD:main", check=False)
     if res.returncode != 0:
-        pu.git("pull", "--rebase", "--quiet", "origin", "main")
+        pu.git("pull", "--rebase", "--autostash", "--quiet", "origin", "main")
         pu.git("push", "--quiet", "origin", "HEAD:main")
     sha = pu.git("rev-parse", "--short", "HEAD").stdout.strip()
     print(r["id"])

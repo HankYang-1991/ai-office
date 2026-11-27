@@ -136,7 +136,7 @@ def main(argv=None):
         import publish_usage as pu
         if not os.environ.get("AI_OFFICE_GITHUB_TOKEN"):
             pu.die("沒有設定 AI_OFFICE_GITHUB_TOKEN")
-        pu.git("pull", "--rebase", "--quiet", "origin", "main")
+        pu.git("pull", "--rebase", "--autostash", "--quiet", "origin", "main")
     snap, h, replaced = record(now, a.history, a.data_dir, a.min_gap_min, a.keep_hours, write=not a.dry_run)
     pools = " ".join(f"{k}={v}" for k, v in snap["pools"].items())
     msg = f"{'覆蓋' if replaced else '新增'}快照 {snap['t']}：{pools}；活躍 {','.join(snap['active']) or '無'}；共 {len(h['snapshots'])} 筆"

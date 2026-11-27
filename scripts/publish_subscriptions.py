@@ -181,7 +181,7 @@ def main(argv=None):
     if push:
         if not os.environ.get("AI_OFFICE_GITHUB_TOKEN"):
             die("沒有設定 AI_OFFICE_GITHUB_TOKEN")
-        git("pull", "--rebase", "--quiet", "origin", "main")
+        git("pull", "--rebase", "--autostash", "--quiet", "origin", "main")
     old = None
     if OUT.exists():
         try:

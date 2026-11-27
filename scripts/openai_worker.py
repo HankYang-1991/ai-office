@@ -368,7 +368,7 @@ def publish_after_write():
         return 0
     git("commit", "--quiet", "-m",
         f"Update openai usage: ${data['spend_month_usd']:.4f}/${data['monthly_cap_usd']:g} ({data['last_status']})")
-    git("pull", "--rebase", "--quiet", "origin", "main")
+    git("pull", "--rebase", "--autostash", "--quiet", "origin", "main")
     git("push", "--quiet", "origin", "HEAD:main")
     sha = git("rev-parse", "--short", "HEAD").stdout.strip()
     print(f"已更新並推送 {sha}：今日 ${data['spend_today_usd']:.4f}，本月 ${data['spend_month_usd']:.4f} / ${data['monthly_cap_usd']:g}")

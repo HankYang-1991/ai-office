@@ -2,7 +2,7 @@
   "schema_version": 1,
   "is_demo": false,
   "source": "Grok Bot 用量報告（每小時更新）",
-  "generated_at": "2026-11-27T08:23:52+08:00",
+  "generated_at": "2026-11-27T08:27:50+08:00",
   "updated_by": "澳洲企鵝",
   "team": {
     "provider": "grok-bot",
@@ -26,7 +26,7 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-28T23:44:00+08:00",
-      "updated_at": "2026-11-27T08:23:52+08:00",
+      "updated_at": "2026-11-27T08:27:50+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
@@ -42,7 +42,7 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-28T23:44:00+08:00",
-      "updated_at": "2026-11-27T08:23:52+08:00",
+      "updated_at": "2026-11-27T08:27:50+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
@@ -58,7 +58,7 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-28T23:44:00+08:00",
-      "updated_at": "2026-11-27T08:23:52+08:00",
+      "updated_at": "2026-11-27T08:27:50+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
@@ -74,7 +74,7 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-28T23:44:00+08:00",
-      "updated_at": "2026-11-27T08:23:52+08:00",
+      "updated_at": "2026-11-27T08:27:50+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
@@ -124,7 +124,7 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-28T23:44:00+08:00",
-      "updated_at": "2026-11-27T08:23:52+08:00",
+      "updated_at": "2026-11-27T08:27:50+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
@@ -140,7 +140,7 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-28T23:44:00+08:00",
-      "updated_at": "2026-11-27T08:23:52+08:00",
+      "updated_at": "2026-11-27T08:27:50+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
@@ -156,7 +156,7 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-28T23:44:00+08:00",
-      "updated_at": "2026-11-27T08:23:52+08:00",
+      "updated_at": "2026-11-27T08:27:50+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
@@ -172,7 +172,7 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-28T23:44:00+08:00",
-      "updated_at": "2026-11-27T08:23:52+08:00",
+      "updated_at": "2026-11-27T08:27:50+08:00",
       "updated_by": "澳洲企鵝"
     },
     {
@@ -188,7 +188,38 @@
       "limit": 100,
       "unit": "%",
       "reset_at": "2026-11-28T23:44:00+08:00",
-      "updated_at": "2026-11-27T08:23:52+08:00",
+      "updated_at": "2026-11-27T08:27:50+08:00",
+      "updated_by": "澳洲企鵝"
+    },
+    {
+      "agent_id": "gemini",
+      "used": 0,
+      "share_pct": 0,
+      "share_label": "0",
+      "connected": true,
+      "note": "本週報告中沒有用量",
+      "provider": "grok-bot",
+      "window": "weekly",
+      "limit": 100,
+      "unit": "%",
+      "reset_at": "2026-11-28T23:44:00+08:00",
+      "updated_at": "2026-11-27T08:27:50+08:00",
+      "updated_by": "澳洲企鵝"
+    },
+    {
+      "agent_id": "gpt",
+      "used": 19.05,
+      "share_pct": 50.0,
+      "share_label": "50",
+      "report_name": "量化分析師",
+      "connected": true,
+      "note": "佔團隊 Grok Bot 用量 50%；used = 佔團隊每週額度的百分比",
+      "provider": "grok-bot",
+      "window": "weekly",
+      "limit": 100,
+      "unit": "%",
+      "reset_at": "2026-11-28T23:44:00+08:00",
+      "updated_at": "2026-11-27T08:27:50+08:00",
       "updated_by": "澳洲企鵝"
     }
   ]

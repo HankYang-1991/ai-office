@@ -251,7 +251,7 @@ def publish_public():
         die(f"data/gemini.json 格式無效：{e}")
     if not os.environ.get("AI_OFFICE_GITHUB_TOKEN"):
         die("沒有設定 AI_OFFICE_GITHUB_TOKEN")
-    git("pull", "--rebase", "--quiet", "origin", "main")
+    git("pull", "--rebase", "--autostash", "--quiet", "origin", "main")
     old = None
     if PUBLIC.exists():
         try:
@@ -306,7 +306,7 @@ def publish_after_write():
         return 0
     git("commit", "--quiet", "-m",
         f"Update gemini usage: {data['requests_today']}/{data['daily_cap']} ({data['last_status']})")
-    git("pull", "--rebase", "--quiet", "origin", "main")
+    git("pull", "--rebase", "--autostash", "--quiet", "origin", "main")
     git("push", "--quiet", "origin", "HEAD:main")
     sha = git("rev-parse", "--short", "HEAD").stdout.strip()
     print(f"已更新並推送 {sha}：今日 {data['requests_today']} / {data['daily_cap']} 次，重置 {data['day_reset_at']}")
