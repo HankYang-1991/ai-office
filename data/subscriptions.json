@@ -1,17 +1,17 @@
 {
-  "updated_at": "2026-11-28T12:10:36+08:00",
+  "updated_at": "2026-11-28T21:18:12+08:00",
   "claude": {
     "plan": "Pro",
-    "session_pct": 41,
-    "weekly_pct": 9,
+    "session_pct": 0,
+    "weekly_pct": 10,
     "weekly_reset": "2026-11-29T23:00:00+08:00",
-    "claude_code_weekly_pct": 33,
-    "status": "Fresh week"
+    "claude_code_weekly_pct": 41,
+    "status": "On track"
   },
   "gemini": {
     "plan": "Google AI Pro",
-    "current_pct": 2,
-    "current_reset": "2026-11-28T13:54:00+08:00",
+    "current_pct": 0,
+    "current_reset": "2026-11-28T23:54:00+08:00",
     "weekly_pct": 3,
     "weekly_reset": "2026-12-01T10:54:00+08:00"
   }
