@@ -13,9 +13,10 @@
   };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const waveAt = t => 1 + Math.floor(t / 12);
-  const pace = w => w - Number(w >= 2) - Number(w >= 4);   // 新危險物登場那一波先不加速度（OpenAI 建議）
-  const interval = w => Math.max(0.58, 1.25 - 0.08 * (pace(w) - 1));
-  const fallVy = w => Math.min(148, 58 + 8 * (pace(w) - 1));
+  const pace = w => w - Number(w >= 3);   // 警報登場的第 3 波先不加速度（OpenAI 第 2 輪）
+  const interval = w => Math.max(0.52, 1 - 0.085 * (pace(w) - 1));
+  const fallVy = w => Math.min(158, 80 + 10 * (pace(w) - 1));
+  const GOOD_R = 12, BAD_R = 14, MISS_LIMIT = 6;
 
   let modal, canvas, ctx, hud = {}, ui = {}, opener = null;
   let k = 2, open = false, rafId = 0, last = 0, ro = null;
@@ -74,15 +75,12 @@
 
   function spawnItem(t, wave, rng) {
     const roll = rng();
-    let type = 'coffee';
-    if (roll < 0.15) type = 'star';
-    else if (roll < 0.35 && wave >= 2) type = 'bug';
-    else if (roll >= 0.90 && wave >= 4) type = 'alarm';
+    const type = roll < 0.15 ? 'star' : roll < 0.33 ? 'bug' : (wave >= 3 && roll >= 0.92) ? 'alarm' : 'coffee';
     return { type, born: t, x: IR + rng() * (W - 2 * IR), y: -IR, vy: fallVy(wave), passed: false, caught: false };
   }
   function newGame(demo) {
     g = { demo: !!demo, t: 0, wave: 1, shownWave: 1, nextAt: demo ? 0.2 : 0.4, x: W / 2, vx: 0, items: [],
-      score: 0, combo: 0, lives: 3, over: false, settled: false, face: 0, squash: 0, parts: [], pops: [], flash: 0, invuln: 0, safeUntil: -1, plan: { t: 0, x: W / 2 }, rng: Math.random };
+      score: 0, combo: 0, lives: 3, misses: 0, over: false, settled: false, face: 0, squash: 0, parts: [], pops: [], flash: 0, invuln: 0, safeUntil: -1, plan: { t: 0, x: W / 2 }, rng: Math.random };
   }
   function axis() {
     let a = (keys.right || touch.right ? 1 : 0) - (keys.left || touch.left ? 1 : 0);
@@ -92,7 +90,18 @@
   function pop(x, y, str, c) { g.pops.push({ x, y, str, c: c || '#ffe08a', t: 0 }); }
   function resolve(it, caught) {
     const good = it.type === 'coffee' || it.type === 'star';
-    if (!caught) { if (good) { g.combo = 0; if (!g.demo) Sfx.miss(); } return; }
+    if (!caught) {
+      if (!good) return;
+      g.combo = 0;
+      if (g.demo) return;
+      Sfx.miss();
+      if (it.born < 12) return;   // 前 12 秒教學期：漏接只斷連，不扣漏杯
+      g.misses++;
+      const lost = g.misses >= MISS_LIMIT;
+      if (lost) { g.misses = 0; g.lives = Math.max(0, g.lives - 1); g.over = g.lives === 0; g.flash = 0.35; }
+      pop(clamp(it.x, 38, W - 38), CUP_Y - 18, lost ? '漏杯 −1 命' : `漏杯 ${g.misses}/${MISS_LIMIT}`, '#ffd9a0');
+      return;
+    }
     if (good) {
       g.combo++;
       const prevTier = Math.floor((g.combo - 1) / 5), tier = Math.floor(g.combo / 5);
@@ -133,12 +142,15 @@
       const it = spawnItem(b, w, g.rng), tArr = b + flight;
       const reach = SPEED * Math.max(0, tArr - p.t - 0.18);
       const lo = Math.max(15, p.x - reach), hi = Math.min(165, p.x + reach);
-      if (it.type === 'star' || it.type === 'coffee') {
-        it.x = lo + g.rng() * Math.max(0, hi - lo); p.x = it.x;
-      } else if (Math.abs(it.x - p.x) < 22) {
-        const leftRoom = p.x - 15, rightRoom = 165 - p.x;
-        it.x = rightRoom >= leftRoom ? Math.min(165, p.x + 22 + g.rng() * 20) : Math.max(15, p.x - 22 - g.rng() * 20);
-      }
+      const prev = p.x, rng = g.rng;
+      const span = Math.max(prev - lo, hi - prev);
+      const d = Math.min(span, (0.48 + 0.44 * rng()) * Math.min(96, reach));
+      const canL = prev - lo >= d, canR = hi - prev >= d;
+      const q = clamp(prev + ((canR && (!canL || rng() < 0.5)) ? d : -d), lo, hi);
+      if (it.type === 'coffee' || it.type === 'star') it.x = q;
+      else if (Math.abs(prev - q) >= 22 && rng() < 0.65) it.x = prev;   // 部分危險物落在上一站，站著不動會接到
+      else if (Math.abs(it.x - q) < 22) it.x = (q + 22 <= 165 && (q - 22 < 15 || q <= W / 2)) ? q + 22 : q - 22;
+      p.x = q;
       p.t = tArr; g.items.push(it); g.nextAt = b + interval(w);
     }
     const events = [];
@@ -150,7 +162,7 @@
     let stop = end;
     for (const { cross, it } of events) {
       it.passed = true;
-      it.caught = Math.abs(it.x - playerAt(cross - g.t)) <= 12 + IR;
+      it.caught = Math.abs(it.x - playerAt(cross - g.t)) <= ((it.type === 'coffee' || it.type === 'star') ? GOOD_R : BAD_R);
       const hurt = it.caught && !g.demo && (it.type === 'bug' || it.type === 'alarm');
       if (hurt && cross < (g.safeUntil ?? -1)) { it.caught = false; continue; }  // 無敵期間危險物不算扣命
       if (hurt) g.safeUntil = cross + 0.4;
@@ -230,12 +242,26 @@
     R(cx - 12, cy - 2, 24, 3, '#fff'); R(cx - 11, cy - 1, 22, 6, '#f4f4f8'); R(cx - 11, cy - 1, 22, 1, '#c9d0e6');
     R(cx + 12, cy, 3, 4, '#f4f4f8'); R(cx - 10, cy + 1, 8, 3, '#e85d4a');
   }
+  function drawDangerCue() {
+    if (!g || mode !== 'play') return;
+    let next = null, eta = Infinity;
+    for (const it of g.items) {
+      if (it.passed || (it.type !== 'bug' && it.type !== 'alarm')) continue;
+      const left = it.born + CUP_Y / it.vy - g.t;
+      if (left >= 0 && left < eta) { next = it; eta = left; }
+    }
+    if (!next || eta > 1.2) return;
+    const col = next.type === 'alarm' ? '#ff7068' : '#ffc15a';
+    R(next.x - BAD_R, CUP_Y + 2, 2 * BAD_R, 2, col);
+    text(next.type === 'alarm' ? '! −2' : '! −1', clamp(next.x, 14, W - 14), CUP_Y - 10, 7, col, 'center', 'rgba(10,13,24,.7)');
+  }
   function render() {
     ctx.imageSmoothingEnabled = false;
     drawBg();
     for (const it of g.items) drawItem(it);
     for (const q of g.parts) if (q.life > 0) R(q.x, q.y, q.life > 0.2 ? 2 : 1, q.life > 0.2 ? 2 : 1, q.c);
     drawPlayer();
+    drawDangerCue();
     for (const q of g.pops) text(q.str, q.x, q.y - q.t * 20, 7, q.c, 'center', 'rgba(10,13,24,.7)');
     if (g.flash > 0) { ctx.fillStyle = `rgba(255,70,60,${g.flash * 0.28})`; ctx.fillRect(0, 0, canvas.width, canvas.height); }
     if (!g.demo) updateHud();
@@ -243,7 +269,7 @@
   let hudSig = '';
   function updateHud() {
     const hearts = '♥'.repeat(g.lives) + '♡'.repeat(Math.max(0, 3 - g.lives));
-    const sig = [g.score, g.wave, g.combo, g.lives, best].join('|');
+    const sig = [g.score, g.wave, g.combo, g.lives, g.misses, best].join('|');
     if (sig === hudSig) return; hudSig = sig;
     hud.score.textContent = g.score.toLocaleString('en-US');
     hud.wave.textContent = g.wave;
@@ -325,10 +351,14 @@
     if (ui.startName) ui.startName.textContent = (CHARS[charIdx] || {}).name || '';
   }
   function syncMute() {
-    ui.mute.textContent = muted ? '🔇' : '🔊';
-    ui.mute.setAttribute('aria-pressed', String(!muted));
-    ui.mute.title = muted ? '音效：關（按一下開啟）' : '音效：開（按一下關閉）';
+    if (ui.mute) {
+      ui.mute.textContent = muted ? '🔇' : '🔊';
+      ui.mute.setAttribute('aria-pressed', String(!muted));
+      ui.mute.title = muted ? '音效：關（按一下開啟）' : '音效：開（按一下關閉）';
+    }
+    if (window.Arcade && Arcade.syncMute) Arcade.syncMute();
   }
+  function toggleMute() { muted = !muted; store.set(KEY_MUTE, muted ? '1' : '0'); syncMute(); if (!muted) { Sfx.ensure(); Sfx.select(); } }
   function resize() {
     if (!open) return;
     const r = canvas.getBoundingClientRect(); if (!r.width || !r.height) return;
@@ -342,9 +372,8 @@
     if (!modal || open) return;
     const opts = from && typeof from === 'object' && (from.fromMenu || from.opener) ? from : { opener: from };
     fromMenu = !!opts.fromMenu; opener = opts.opener || document.activeElement;
-    open = true; modal.hidden = false; document.body.classList.add('qj-open');
+    open = true;
     best = boardBest(); loadSheets();   // 重開同一結算頁時保留 lastEntryId，改名才改得到該筆
-    if (window.Office) window.Office.setActive(false);
     if (!ro) ro = new ResizeObserver(resize);
     ro.observe(canvas); resize();
     if (mode === 'play') mode = 'paused';
@@ -354,15 +383,10 @@
   function closeGame(opts) {
     if (!open) return;
     if (mode === 'play') mode = 'paused';
-    const silent = opts && opts.silent, back = fromMenu && window.Arcade && !silent;
-    open = false; modal.hidden = true; stopLoop(); clearInput();
+    const silent = opts && opts.silent;
+    open = false; stopLoop(); clearInput();
     if (ro) ro.disconnect();
-    if (back) window.Arcade.gameClosed();
-    else {
-      document.body.classList.remove('qj-open');
-      if (window.Office) window.Office.setActive(!document.hidden && !(window.Arcade && window.Arcade.isBusy()));
-      if (opener && opener.focus && document.contains(opener)) opener.focus({ preventScroll: true });
-    }
+    if (!silent && window.Arcade && Arcade.closeShell) Arcade.closeShell();
     fromMenu = false; opener = null;
   }
 
@@ -370,14 +394,9 @@
   const isRight = e => e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D';
   function onKeyDown(e) {
     if (!open || e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (e.key === 'Escape') {
-      e.preventDefault(); e.stopImmediatePropagation();
-      if (e.repeat) return;
-      const typing = e.target && e.target.closest && e.target.closest('input, textarea');
-      if (typing) { e.target.blur(); return; }   // 第一次 Esc 先離開名字欄，再按一次才關閉
-      closeGame(); return;
-    }
-    if (e.key === 'Tab') { trapFocus(e); return; }
+    if (e.key === 'Escape') return;   // 由街機外殼統一關閉視窗
+
+    if (e.key === 'Tab') return;   // 焦點循環由街機外殼處理，才能切到上方分頁
     if (e.target && e.target.closest && e.target.closest('input, textarea')) return;
     if (e.key === ' ' || e.key === 'Enter') {
       if (e.repeat) { e.preventDefault(); return; }
@@ -410,7 +429,7 @@
   }
 
   function init() {
-    modal = document.getElementById('ccModal'); if (!modal) return;
+    modal = document.getElementById('ccPane') || document.getElementById('ccModal'); if (!modal) return;
     canvas = document.getElementById('ccCanvas'); ctx = canvas.getContext('2d', { alpha: false });
     const $ = s => modal.querySelector(s);
     hud = { bar: $('.qj-hud'), score: $('#ccScore'), wave: $('#ccWave'), best: $('#ccBest'), combo: $('#ccCombo'), lives: $('#ccLives') };
@@ -431,9 +450,8 @@
     const toMenu = $('#ccToMenu'); if (toMenu) toMenu.addEventListener('click', () => closeGame());
     ui.resumeBtn.addEventListener('click', resume);
     $('#ccRestart').addEventListener('click', startGame);
-    $('#ccClose').addEventListener('click', closeGame);
-    modal.addEventListener('pointerdown', e => { if (e.target === modal && e.pointerType === 'mouse') closeGame(); });
-    ui.mute.addEventListener('click', () => { muted = !muted; store.set(KEY_MUTE, muted ? '1' : '0'); syncMute(); if (!muted) { Sfx.ensure(); Sfx.select(); } });
+    const closeBtn = $('#ccClose'); if (closeBtn) closeBtn.addEventListener('click', closeGame);
+    if (ui.mute) ui.mute.addEventListener('click', toggleMute);
     syncMute();
     for (const el of [canvas, ui.btnL, ui.btnR]) if (el) el.style.touchAction = 'none';
     holdBtn(ui.btnL, 'left'); holdBtn(ui.btnR, 'right');
@@ -459,8 +477,8 @@
   }
 
   window.CoffeeCatch = {
-    open: openGame, close: closeGame, isOpen: () => open,
-    debug: () => g && { mode, x: +g.x.toFixed(1), score: g.score, wave: g.wave, lives: g.lives, combo: g.combo, running: !!rafId, best, items: g.items.length },
+    open: openGame, close: closeGame, isOpen: () => open, toggleMute, isMuted: () => muted,
+    debug: () => g && { mode, x: +g.x.toFixed(1), t: +g.t.toFixed(2), score: g.score, wave: g.wave, lives: g.lives, misses: g.misses, combo: g.combo, running: !!rafId, best, items: g.items.length },
     __forceOver: () => { if (g && (mode === 'play' || mode === 'title')) { g.demo = false; g.score = Math.max(g.score, 1); g.wave = Math.max(g.wave, 1); g.over = true; gameOver(); } },
     __setState: o => { if (!g) return; Object.assign(g, o || {}); },
   };

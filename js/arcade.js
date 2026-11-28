@@ -1,9 +1,16 @@
-/* 休息區街機選單：列出已註冊的小遊戲與各遊戲目前的第一名。純前端，不呼叫 API。 */
+/* 休息區街機外殼：三個等寬分頁直接開遊戲。純前端，不呼叫 API。 */
 (function () {
   'use strict';
+  const KEY_LAST = 'aiOffice.arcadeLastGame';
+  const ORDER = ['jump', 'catch', 'dash'];
+  const PANE = { jump: 'qjPane', catch: 'ccPane', dash: 'hdPane' };
   const games = [];
-  let modal, cards, opener = null, open = false;
+  let modal, panel, opener = null, open = false, current = null;
   const byId = () => Object.fromEntries(games.map(g => [g.id, g]));
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* 無痕或額滿就略過 */ } },
+  };
 
   const CHARS = [
     { id: 'da-zhaowang', name: '大沼王', tag: '漫畫家', color: '#5a9fd6', accent: '#2f6aa0' },
@@ -14,80 +21,155 @@
   ];
 
   function register(g) { if (g && g.id && !byId()[g.id]) games.push(g); }
-
   function anyGameOpen() { return games.some(g => g.isOpen && g.isOpen()); }
   function isBusy() { return open || anyGameOpen(); }
+  function api(id) {
+    return ({ jump: window.QuagsireJump, catch: window.CoffeeCatch, dash: window.HallwayDash })[id];
+  }
 
-  function renderCards() {
-    if (!cards) return;
+  function deactivate(id) {
+    const g = byId()[id];
+    if (g && g.isOpen && g.isOpen() && g.close) g.close({ silent: true });
+  }
+
+  function paintTabScores() {
     const B = window.ArcadeBoard;
-    cards.innerHTML = '';
-    games.forEach(g => {
-      const top = B && B.best(g.id);
-      const b = document.createElement('button');
-      b.type = 'button'; b.className = 'arcade-card'; b.dataset.game = g.id;
-      b.innerHTML = `<span class="ac-emoji">${g.emoji || '🎮'}</span><span class="ac-body"><b>${g.title}</b><small>${g.blurb || ''}</small><span class="ac-best">${top ? `🥇 ${top.score.toLocaleString('en-US')} · ${top.name}` : '尚無紀錄'}</span></span><span class="ac-go">玩</span>`;
-      b.addEventListener('click', () => play(g.id));
-      cards.appendChild(b);
+    ORDER.forEach(id => {
+      const el = document.getElementById('tabBest-' + id);
+      if (!el) return;
+      const top = B && B.best(id);
+      el.textContent = top ? `🥇 ${top.score.toLocaleString('en-US')}` : '';
     });
   }
 
-  function closeGames() { games.forEach(g => { if (g.isOpen && g.isOpen() && g.close) g.close({ silent: true }); }); }
+  function syncTabs() {
+    ORDER.forEach(id => {
+      const tab = document.getElementById('tab-' + id);
+      const pane = document.getElementById(PANE[id]);
+      const on = id === current;
+      if (tab) { tab.setAttribute('aria-selected', String(on)); tab.tabIndex = on ? 0 : -1; }
+      if (pane) pane.hidden = !on;
+    });
+    if (panel) panel.classList.toggle('wide', current === 'dash');
+    paintTabScores();
+    syncMute();
+  }
 
-  function openMenu(from) {
+  function switchTo(id) {
+    if (!ORDER.includes(id)) id = 'jump';
+    if (current && current !== id) deactivate(current);
+    current = id;
+    store.set(KEY_LAST, id);
+    syncTabs();
+    const g = byId()[id];
+    if (g && g.open && !(g.isOpen && g.isOpen())) g.open({ fromMenu: true, opener: opener || document.getElementById('gameBtn') });
+    const tab = document.getElementById('tab-' + id);
+    if (tab && document.activeElement && document.activeElement.classList.contains('arcade-tab')) {
+      tab.focus({ preventScroll: true });
+    }
+  }
+
+  function openShell(from, id) {
     if (!modal) return;
-    closeGames();
+    const want = (id && ORDER.includes(id)) ? id : (ORDER.includes(store.get(KEY_LAST, '')) ? store.get(KEY_LAST, 'jump') : 'jump');
+    if (open) { if (want !== current) switchTo(want); return; }
     opener = from && from.focus ? from : document.getElementById('gameBtn') || document.activeElement;
     open = true; modal.hidden = false; document.body.classList.add('qj-open');
-    renderCards();
     if (window.Office) window.Office.setActive(false);
-    const first = modal.querySelector('.arcade-card') || modal.querySelector('#arcadeName');
-    setTimeout(() => { if (open && first) first.focus({ preventScroll: true }); }, 30);
+    current = null;
+    switchTo(want);
+    const tab = document.getElementById('tab-' + current);
+    setTimeout(() => { if (open && tab) tab.focus({ preventScroll: true }); }, 30);
   }
-  function closeMenu() {
+  function closeShell() {
     if (!open) return;
+    if (current) deactivate(current);
+    current = null;
     open = false; modal.hidden = true;
-    if (!anyGameOpen()) document.body.classList.remove('qj-open');
-    if (window.Office) window.Office.setActive(!document.hidden && !anyGameOpen());
+    document.body.classList.remove('qj-open');
+    if (window.Office) window.Office.setActive(!document.hidden);
     if (opener && opener.focus && document.contains(opener)) opener.focus({ preventScroll: true });
     opener = null;
   }
-  function play(id) {
-    const g = byId()[id]; if (!g || !g.open) return;
-    if (open) { open = false; modal.hidden = true; }
-    document.body.classList.add('qj-open');
-    if (window.Office) window.Office.setActive(false);
-    g.open({ fromMenu: true, opener: document.getElementById('gameBtn') });
+
+  function toggleMute() {
+    const a = api(current);
+    if (a && a.toggleMute) a.toggleMute();
+    else syncMute();
   }
-  // 遊戲視窗關閉時回到選單（silent 關閉則不再打開選單，給整組關掉用）
-  function gameClosed(opts) {
-    if (opts && opts.silent) return;
-    if (!modal) return;
-    open = true; modal.hidden = false; document.body.classList.add('qj-open');
-    renderCards();
-    const btn = modal.querySelector('.arcade-card') || modal.querySelector('#arcadeMenuClose');
-    if (btn) btn.focus({ preventScroll: true });
-    if (window.Office) window.Office.setActive(false);
+  function syncMute() {
+    const btn = document.getElementById('arcadeMute');
+    if (!btn) return;
+    const a = api(current);
+    const muted = !!(a && a.isMuted && a.isMuted());
+    btn.textContent = muted ? '🔇' : '🔊';
+    btn.setAttribute('aria-pressed', String(!muted));
+    btn.title = muted ? '音效：關（按一下開啟）' : '音效：開（按一下關閉）';
+  }
+
+  function focusables() {
+    if (!modal) return [];
+    return [...modal.querySelectorAll('button:not(:disabled), input:not([disabled]), [tabindex="0"]')]
+      .filter(el => !el.closest('[hidden]') && el.getClientRects().length);
+  }
+  function trapFocus(e) {
+    const f = focusables();
+    if (!f.length) { e.preventDefault(); return; }
+    const i = f.indexOf(document.activeElement);
+    if (i < 0 || (e.shiftKey ? i === 0 : i === f.length - 1)) {
+      e.preventDefault();
+      f[e.shiftKey ? f.length - 1 : 0].focus({ preventScroll: true });
+    }
   }
 
   function onKey(e) {
     if (!open) return;
-    if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); closeMenu(); }
+    if (e.key === 'Escape') {
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (e.repeat) return;
+      const typing = e.target && e.target.closest && e.target.closest('input, textarea');
+      if (typing) { e.target.blur(); return; }
+      closeShell(); return;
+    }
+    if (e.key === 'Tab') {
+      const typing = e.target && e.target.closest && e.target.closest('input, textarea');
+      if (typing) return;
+      trapFocus(e); return;
+    }
+    const tab = e.target && e.target.closest && e.target.closest('.arcade-tab');
+    if (!tab) return;
+    const i = ORDER.indexOf(tab.dataset.game);
+    if (i < 0) return;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const n = ORDER[(i + (e.key === 'ArrowRight' ? 1 : ORDER.length - 1)) % ORDER.length];
+      switchTo(n);
+      const next = document.getElementById('tab-' + n);
+      if (next) next.focus({ preventScroll: true });
+    } else if (e.key === 'Home') { e.preventDefault(); switchTo(ORDER[0]); document.getElementById('tab-' + ORDER[0]).focus({ preventScroll: true }); }
+    else if (e.key === 'End') { e.preventDefault(); switchTo(ORDER[ORDER.length - 1]); document.getElementById('tab-' + ORDER[ORDER.length - 1]).focus({ preventScroll: true }); }
   }
 
   function init() {
     modal = document.getElementById('arcadeModal'); if (!modal) return;
-    cards = document.getElementById('arcadeCards');
+    panel = document.getElementById('arcadePanel');
     const closeBtn = document.getElementById('arcadeMenuClose');
-    if (closeBtn) closeBtn.addEventListener('click', closeMenu);
-    modal.addEventListener('pointerdown', e => { if (e.target === modal && e.pointerType === 'mouse') closeMenu(); });
-    if (window.ArcadeBoard) window.ArcadeBoard.bindNameInput(document.getElementById('arcadeName'));
+    if (closeBtn) closeBtn.addEventListener('click', closeShell);
+    const muteBtn = document.getElementById('arcadeMute');
+    if (muteBtn) muteBtn.addEventListener('click', toggleMute);
+    modal.querySelectorAll('.arcade-tab').forEach(tab => {
+      tab.addEventListener('click', () => switchTo(tab.dataset.game));
+    });
+    modal.addEventListener('pointerdown', e => { if (e.target === modal && e.pointerType === 'mouse') closeShell(); });
     document.addEventListener('keydown', onKey, true);
+    if (window.ArcadeBoard && ArcadeBoard.onName) ArcadeBoard.onName(paintTabScores);
   }
 
   window.Arcade = {
-    register, openMenu, closeMenu, play, gameClosed, isBusy, isMenuOpen: () => open,
-    games: () => games.slice(), CHARS,
+    register, openMenu: openShell, openShell, closeMenu: closeShell, closeShell,
+    play: id => openShell(document.getElementById('gameBtn'), id),
+    gameClosed: () => {}, isBusy, isMenuOpen: () => open, isShellOpen: () => open,
+    current: () => current, games: () => games.slice(), CHARS, syncMute,
     // 共用：角色走路圖載入（64×64 格）
     loadSheets(chars, sheets) {
       (chars || CHARS).forEach(c => {

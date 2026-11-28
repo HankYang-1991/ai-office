@@ -517,10 +517,14 @@
     ui.startName.textContent = CHARS[charIdx].name;
   }
   function syncMute() {
-    ui.mute.textContent = muted ? '🔇' : '🔊';
-    ui.mute.setAttribute('aria-pressed', String(!muted));
-    ui.mute.title = muted ? '音效：關（按一下開啟）' : '音效：開（按一下關閉）';
+    if (ui.mute) {
+      ui.mute.textContent = muted ? '🔇' : '🔊';
+      ui.mute.setAttribute('aria-pressed', String(!muted));
+      ui.mute.title = muted ? '音效：關（按一下開啟）' : '音效：開（按一下關閉）';
+    }
+    if (window.Arcade && Arcade.syncMute) Arcade.syncMute();
   }
+  function toggleMute() { muted = !muted; store.set(KEY_MUTE, muted ? '1' : '0'); syncMute(); if (!muted) { Sfx.ensure(); Sfx.select(); } }
 
   function resize() {
     if (!open) return;
@@ -538,10 +542,9 @@
     const opts = from && typeof from === 'object' && (from.fromMenu || from.opener || from.silent != null) ? from : { opener: from };
     fromMenu = !!opts.fromMenu;
     opener = opts.opener || document.activeElement;
-    open = true; modal.hidden = false; document.body.classList.add('qj-open');
+    open = true;
     lastEntryId = null; best = boardBest();
     loadSheets();
-    if (window.Office) window.Office.setActive(false);   // 遊戲開著時辦公室地圖暫停，省電
     if (!ro) { ro = new ResizeObserver(resize); }
     ro.observe(canvas); resize();
     if (mode === 'play') mode = 'paused';
@@ -553,16 +556,10 @@
     if (!open) return;
     if (mode === 'play' || mode === 'dying') { if (mode === 'dying') gameOver(); else mode = 'paused'; }
     const silent = opts && opts.silent;
-    const back = fromMenu && window.Arcade && !silent;
-    open = false; modal.hidden = true;
+    open = false;
     stopLoop(); clearInput();
     if (ro) ro.disconnect();
-    if (back) { if (window.Arcade) window.Arcade.gameClosed(); }
-    else {
-      document.body.classList.remove('qj-open');
-      if (window.Office) window.Office.setActive(!document.hidden && !(window.Arcade && window.Arcade.isBusy()));
-      if (opener && opener.focus && document.contains(opener)) opener.focus({ preventScroll: true });
-    }
+    if (!silent && window.Arcade && Arcade.closeShell) Arcade.closeShell();
     fromMenu = false; opener = null;
   }
 
@@ -571,12 +568,9 @@
   const isRight = e => e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D';
   function onKeyDown(e) {
     if (!open || e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (e.target && e.target.closest && e.target.closest('input, textarea')) {
-      if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) e.target.blur(); }
-      return;
-    }
-    if (e.key === 'Tab') { trapFocus(e); return; }
-    if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) closeGame(); return; }
+    if (e.key === 'Escape') return;   // 由街機外殼統一關閉視窗
+    if (e.target && e.target.closest && e.target.closest('input, textarea')) return;
+    if (e.key === 'Tab') return;   // 焦點循環由街機外殼處理，才能切到上方分頁
     if (e.key === ' ' || e.key === 'Enter') {
       if (e.repeat) { e.preventDefault(); return; }                       // 長按不會連開好幾局
       if (e.target && e.target.closest && e.target.closest('button, input')) return;   // 焦點在按鈕或名字欄：交給原生行為
@@ -616,7 +610,7 @@
   }
 
   function init() {
-    modal = document.getElementById('qjModal'); if (!modal) return;
+    modal = document.getElementById('qjPane') || document.getElementById('qjModal'); if (!modal) return;
     canvas = document.getElementById('qjCanvas'); ctx = canvas.getContext('2d', { alpha: false });
     const $ = s => modal.querySelector(s);
     hud = { bar: $('.qj-hud'), score: $('#qjScore'), floor: $('#qjFloor'), best: $('#qjBest'), boost: $('#qjBoost') };
@@ -637,9 +631,8 @@
     const toMenu = $('#qjToMenu'); if (toMenu) toMenu.addEventListener('click', () => closeGame());
     ui.resumeBtn.addEventListener('click', resume);
     $('#qjRestart').addEventListener('click', startGame);
-    $('#qjClose').addEventListener('click', closeGame);
-    modal.addEventListener('pointerdown', e => { if (e.target === modal && e.pointerType === 'mouse') closeGame(); });   // 觸控不靠點背景關閉，避免誤觸
-    ui.mute.addEventListener('click', () => { muted = !muted; store.set(KEY_MUTE, muted ? '1' : '0'); syncMute(); if (!muted) { Sfx.ensure(); Sfx.select(); } });
+    const closeBtn = $('#qjClose'); if (closeBtn) closeBtn.addEventListener('click', closeGame);
+    if (ui.mute) ui.mute.addEventListener('click', toggleMute);
     syncMute();
     holdBtn(ui.btnL, 'left'); holdBtn(ui.btnR, 'right');
     // 拖曳：相對位移（手指移多少、角色目標就移多少），第一根手指取得控制
@@ -664,7 +657,7 @@
   }
 
   window.QuagsireJump = {
-    open: openGame, close: closeGame, isOpen: () => open,
+    open: openGame, close: closeGame, isOpen: () => open, toggleMute, isMuted: () => muted,
     __forceFall: () => { if (g && mode === 'play') { g.plats.forEach(p => { p.broken = true; }); } },
     __forceOver: (score) => { if (g && mode === 'play') { if (score != null) { g.score = score; g.height = Math.max(g.height, score); } gameOver(); } },
     debug: () => g && { mode, x: +g.x.toFixed(1), y: +g.y.toFixed(1), vx: +g.vx.toFixed(1), vy: +g.vy.toFixed(1), score: g.score, floor: g.floor, height: Math.floor(g.height), plats: g.plats.length, running: !!rafId, best, char: CHARS[charIdx].name, k: +k.toFixed(2),

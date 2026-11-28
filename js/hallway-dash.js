@@ -4,7 +4,7 @@
  */
 (function () {
   'use strict';
-  const W = 320, H = 180, G = 150, PW = 14, STAND = 24, DUCK = 11, GRAV = 1000, JUMP = -280, VMAX = 190, DT = 0.05;
+  const W = 320, H = 180, G = 150, PW = 14, STAND = 24, DUCK = 11, GRAV = 1000, JUMP = -280, VMAX = 190, DT = 0.05, JUMP_BUFFER = 0.12;
   const KEY_CHAR = 'aiOffice.hallwayDashChar', KEY_MUTE = 'aiOffice.hallwayDashMute';
   const CHARS = (window.Arcade && Arcade.CHARS) || [];
   const store = {
@@ -25,8 +25,11 @@
   const held = { jump: new Set(), duck: new Set() };
   function action(k, id, down) {
     const set = held[k];
-    if (down) { if (mode !== 'play' || set.has(id)) return; set.add(id); if (k === 'jump') input.jumpTap = true; }
-    else set.delete(id);
+    if (down) {
+      if (mode !== 'play' || set.has(id)) return;
+      if (k === 'jump' && set.size === 0) input.jumpTap = true;   // 只在「從未按到按下」時排隊起跳
+      set.add(id);
+    } else set.delete(id);
     input[k] = set.size > 0;
   }
   const sheets = {};
@@ -81,7 +84,10 @@
     const rng = s.rng, int = n => Math.floor(rng() * n);
     while (s.next < s.d + 480) {
       const x = s.next;
-      const cloud = s.groups === 1 || (s.groups > 1 && rng() < 0.44);
+      let cloud = s.groups === 1 || (s.groups > 1 && rng() < 0.44);
+      if ((s.runLen || 0) >= 3 && cloud === s.lastCloud) cloud = !cloud;   // 同類最多連 3 組
+      s.runLen = cloud === s.lastCloud ? (s.runLen || 0) + 1 : 1;
+      s.lastCloud = cloud;
       let end;
       if (cloud) {
         const w = 24 + int(9);
@@ -89,10 +95,11 @@
         end = x + w;
         if (x > 1200 && rng() < 0.35) { s.obs.push({ kind: 'cloud', x: end + 8, y: 90, w: 22, h: 44 }); end += 30; }
       } else {
-        const w = 14 + int(5), h = 11 + int(4);
+        const extra = clamp(Math.floor((speedAt(x) - 110) / 25), 0, 2);
+        const w = 14 + int(3 + extra), h = 11 + int(4);
         s.obs.push({ kind: int(2) ? 'cabinet' : 'box', x, y: G - h, w, h });
         end = x + w;
-        if (rng() < 0.7) s.items.push({ kind: 'star', x: x + w / 2 - 3, y: G - 65, w: 6, h: 6 });
+        if (rng() < 0.7) s.items.push({ kind: 'star', x: x + w / 2 - 3, y: G - 60, w: 6, h: 6 });
       }
       if (rng() < 0.6) s.items.push({ kind: 'coffee', x: end + 95, y: G - 8, w: 7, h: 8 });
       const rest = Math.max(0.85, 1.55 - end / 10000);   // 以當前速度給足換姿時間，再用最高速設硬下限（OpenAI 建議）
@@ -101,8 +108,10 @@
     }
   }
   function newGame(demo) {
+    held.jump.clear(); held.duck.clear();
+    input.jump = input.duck = input.jumpTap = false;
     g = { demo: !!demo, d: 0, foot: G, vy: 0, h: STAND, prevJump: false, dead: false, coyote: 0, buffer: 0,
-      next: 220, groups: 0, obs: [], items: [], coffee: 0, star: 0, score: 0, floor: 1, shownFloor: 1,
+      next: 220, groups: 0, runLen: 0, lastCloud: null, obs: [], items: [], coffee: 0, star: 0, score: 0, floor: 1, shownFloor: 1,
       parts: [], pops: [], squash: 0, t: 0, ducked: false, rng: Math.random };
     spawnAhead(g);
   }
@@ -114,18 +123,14 @@
     dt = Math.min(dt, DT);
     g.t += dt;
     const n = Math.max(1, Math.ceil(dt * 120)), t = dt / n;
-    const wantJump = (g.demo || mode === 'play') ? input.jump : false;
-    const wantDuck = (g.demo || mode === 'play') ? input.duck : false;
-    if (g.demo) { /* 示範：看到障礙自動跳或蹲 */ }
-    if (input.jumpTap) { g.buffer = 0.1; input.jumpTap = false; }
-    else if (wantJump && !g.prevJump) g.buffer = 0.1;
-    g.prevJump = wantJump;
+    const playerDuck = !g.demo && mode === 'play' && input.duck;
+    if (!g.demo && mode === 'play' && input.jumpTap) g.buffer = JUMP_BUFFER;
+    input.jumpTap = false;
     for (let i = 0; i < n && !g.dead; i++) {
       const grounded = g.foot >= G - 0.01 && g.vy >= 0;
       if (grounded) { g.foot = G; g.vy = 0; g.coyote = 0.07; }
       else g.coyote = Math.max(0, g.coyote - t);
-      g.buffer = Math.max(0, g.buffer - t);
-      const duck = grounded && wantDuck;
+      const duck = grounded && (g.demo ? demoThink(g, grounded) : playerDuck);
       if (duck && !g.ducked && !g.demo) Sfx.duck();
       g.ducked = duck;
       g.h = duck ? DUCK : STAND;
@@ -133,6 +138,7 @@
         g.vy = JUMP; g.coyote = 0; g.buffer = 0; g.squash = 1;
         if (!g.demo) Sfx.jump(); puff(g.d + 52, G, 4, '#e8f4ff');
       }
+      g.buffer = Math.max(0, g.buffer - t);
       if (!grounded || g.vy < 0) {
         g.foot += g.vy * t + 0.5 * GRAV * t * t;
         g.vy += GRAV * t;
@@ -168,15 +174,16 @@
     if (g.demo && (g.dead || g.d > 1800)) newGame(true);
   }
 
-  // 示範 AI：靠近障礙就跳或蹲
-  function demoThink() {
-    if (!g || !g.demo) return;
-    input.jump = input.duck = false;
-    const px = g.d + 46;
-    const soon = g.obs.find(o => o.x + o.w > px && o.x < px + 70);
-    if (!soon) return;
-    if (soon.kind === 'cloud') input.duck = soon.x - px < 50;
-    else if (soon.kind === 'cabinet' || soon.kind === 'box') { if (soon.x - px < 36 && g.foot >= G) input.jump = true; }
+  // 示範 AI：與玩家共用物理，用「通過家具中心時接近跳頂」反推起跳點
+  function demoThink(s, grounded) {
+    const left = s.d + 46, front = left + PW, v = speedAt(s.d);
+    const o = s.obs.find(o => o.x + o.w > left);
+    if (!o) return false;
+    const gap = o.x - front;
+    if (o.kind === 'cloud') return gap < v * 0.18;
+    const lead = v * (-JUMP / GRAV) - (PW + o.w) / 2;
+    if (grounded && gap >= 0 && gap <= lead) s.buffer = JUMP_BUFFER;
+    return false;
   }
 
   function drawBg() {
@@ -278,7 +285,7 @@
     const elapsed = Math.max(0, (now - last) / 1000); last = now;
     if (elapsed > 0.15 && mode === 'play') { pause(); return; }
     acc += Math.min(elapsed, 0.15);
-    while (acc >= TICK && animating()) { acc -= TICK; if (g.demo) demoThink(); step(TICK); }
+    while (acc >= TICK && animating()) { acc -= TICK; step(TICK); }
     if (open && !document.hidden) render();
     if (animating() && !rafId) rafId = requestAnimationFrame(frame);
   }
@@ -342,10 +349,14 @@
     if (ui.startName) ui.startName.textContent = (CHARS[charIdx] || {}).name || '';
   }
   function syncMute() {
-    ui.mute.textContent = muted ? '🔇' : '🔊';
-    ui.mute.setAttribute('aria-pressed', String(!muted));
-    ui.mute.title = muted ? '音效：關（按一下開啟）' : '音效：開（按一下關閉）';
+    if (ui.mute) {
+      ui.mute.textContent = muted ? '🔇' : '🔊';
+      ui.mute.setAttribute('aria-pressed', String(!muted));
+      ui.mute.title = muted ? '音效：關（按一下開啟）' : '音效：開（按一下關閉）';
+    }
+    if (window.Arcade && Arcade.syncMute) Arcade.syncMute();
   }
+  function toggleMute() { muted = !muted; store.set(KEY_MUTE, muted ? '1' : '0'); syncMute(); if (!muted) { Sfx.ensure(); Sfx.select(); } }
   function resize() {
     if (!open) return;
     const r = canvas.getBoundingClientRect(); if (!r.width || !r.height) return;
@@ -359,9 +370,8 @@
     if (!modal || open) return;
     const opts = from && typeof from === 'object' && (from.fromMenu || from.opener) ? from : { opener: from };
     fromMenu = !!opts.fromMenu; opener = opts.opener || document.activeElement;
-    open = true; modal.hidden = false; document.body.classList.add('qj-open');
+    open = true;
     best = boardBest(); loadSheets();
-    if (window.Office) window.Office.setActive(false);
     if (!ro) ro = new ResizeObserver(resize);
     ro.observe(canvas); resize();
     if (mode === 'play') mode = 'paused';
@@ -371,15 +381,10 @@
   function closeGame(opts) {
     if (!open) return;
     if (mode === 'play') mode = 'paused';
-    const silent = opts && opts.silent, back = fromMenu && window.Arcade && !silent;
-    open = false; modal.hidden = true; stopLoop(); clearInput();
+    const silent = opts && opts.silent;
+    open = false; stopLoop(); clearInput();
     if (ro) ro.disconnect();
-    if (back) window.Arcade.gameClosed();
-    else {
-      document.body.classList.remove('qj-open');
-      if (window.Office) window.Office.setActive(!document.hidden && !(window.Arcade && window.Arcade.isBusy()));
-      if (opener && opener.focus && document.contains(opener)) opener.focus({ preventScroll: true });
-    }
+    if (!silent && window.Arcade && Arcade.closeShell) Arcade.closeShell();
     fromMenu = false; opener = null;
   }
 
@@ -387,12 +392,9 @@
   const isDuck = e => e.key === 'ArrowDown' || e.key === 's' || e.key === 'S';
   function onKeyDown(e) {
     if (!open || e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (e.target && e.target.closest && e.target.closest('input, textarea, [contenteditable=true]')) {
-      if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) e.target.blur(); }
-      return;
-    }
-    if (e.key === 'Tab') { trapFocus(e); return; }
-    if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) closeGame(); return; }
+    if (e.key === 'Escape') return;   // 由街機外殼統一關閉視窗
+    if (e.target && e.target.closest && e.target.closest('input, textarea, [contenteditable=true]')) return;
+    if (e.key === 'Tab') return;   // 焦點循環由街機外殼處理，才能切到上方分頁
     if ((e.key === 'Enter' || (e.key === ' ' && mode !== 'play')) && mode !== 'play') {
       if (e.repeat) { e.preventDefault(); return; }
       if (e.target && e.target.closest && e.target.closest('button, input')) return;
@@ -422,7 +424,7 @@
   }
 
   function init() {
-    modal = document.getElementById('hdModal'); if (!modal) return;
+    modal = document.getElementById('hdPane') || document.getElementById('hdModal'); if (!modal) return;
     canvas = document.getElementById('hdCanvas'); ctx = canvas.getContext('2d', { alpha: false });
     const $ = s => modal.querySelector(s);
     hud = { bar: $('.qj-hud'), score: $('#hdScore'), floor: $('#hdFloor'), best: $('#hdBest') };
@@ -443,9 +445,9 @@
     const toMenu = $('#hdToMenu'); if (toMenu) toMenu.addEventListener('click', () => closeGame());
     ui.resumeBtn.addEventListener('click', resume);
     $('#hdRestart').addEventListener('click', startGame);
-    $('#hdClose').addEventListener('click', closeGame);
+    const closeBtn = $('#hdClose'); if (closeBtn) closeBtn.addEventListener('click', closeGame);
     modal.addEventListener('pointerdown', e => { if (e.target === modal && e.pointerType === 'mouse') closeGame(); });
-    ui.mute.addEventListener('click', () => { muted = !muted; store.set(KEY_MUTE, muted ? '1' : '0'); syncMute(); if (!muted) { Sfx.ensure(); Sfx.select(); } });
+    if (ui.mute) ui.mute.addEventListener('click', toggleMute);
     syncMute();
     for (const el of [canvas, ui.btnDuck, ui.btnJump]) if (el) el.style.touchAction = 'none';
     holdBtn(ui.btnDuck, 'duck');
@@ -471,7 +473,7 @@
   }
 
   window.HallwayDash = {
-    open: openGame, close: closeGame, isOpen: () => open,
+    open: openGame, close: closeGame, isOpen: () => open, toggleMute, isMuted: () => muted,
     debug: () => g && { mode, d: +g.d.toFixed(1), score: g.score, floor: g.floor, vy: +g.vy.toFixed(1), duck: g.ducked, running: !!rafId, best, dead: g.dead, obs: g.obs.length },
     __forceOver: () => { if (g && mode === 'play') { g.dead = true; g.score = Math.max(g.score, 1); gameOver(); } },
     __setState: o => { if (!g) return; Object.assign(g, o || {}); },

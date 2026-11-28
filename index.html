@@ -95,31 +95,29 @@
   </aside>
 </main>
 
-<div class="qj-modal" id="arcadeModal" role="dialog" aria-modal="true" aria-labelledby="arcadeHeading" hidden>
-  <div class="qj-panel arcade-menu-panel">
-    <div class="qj-head">
-      <h2 id="arcadeHeading">🎮 休息區街機</h2>
-      <span class="qj-sub">三款小遊戲 · 排名只存在這台裝置</span>
-      <button type="button" class="qj-icon" id="arcadeMenuClose" title="關閉（Esc）" aria-label="關閉選單">✕</button>
+<div class="qj-modal arcade-shell" id="arcadeModal" role="dialog" aria-modal="true" aria-labelledby="arcadeHeading" hidden>
+  <div class="qj-panel arcade-shell-panel" id="arcadePanel">
+    <h2 id="arcadeHeading" class="visually-hidden">小遊戲</h2>
+    <div class="arcade-tabs" role="tablist" aria-label="小遊戲">
+      <button type="button" role="tab" class="arcade-tab" id="tab-jump" data-game="jump" aria-selected="true" aria-controls="qjPane">
+        <span class="at-name">沼王跳跳樂</span>
+        <span class="at-best" id="tabBest-jump"></span>
+      </button>
+      <button type="button" role="tab" class="arcade-tab" id="tab-catch" data-game="catch" aria-selected="false" aria-controls="ccPane" tabindex="-1">
+        <span class="at-name">沼王接咖啡</span>
+        <span class="at-best" id="tabBest-catch"></span>
+      </button>
+      <button type="button" role="tab" class="arcade-tab" id="tab-dash" data-game="dash" aria-selected="false" aria-controls="hdPane" tabindex="-1">
+        <span class="at-name">走廊衝刺</span>
+        <span class="at-best" id="tabBest-dash"></span>
+      </button>
     </div>
-    <div class="arcade-menu">
-      <label class="arc-name menu-name">玩家名稱
-        <input id="arcadeName" maxlength="12" autocomplete="nickname" spellcheck="false" placeholder="匿名沼王">
-      </label>
-      <div class="arcade-cards" id="arcadeCards"></div>
-      <p class="qj-keys">點遊戲開始 · 前五名存在這台裝置、不會上傳 · Esc 關閉</p>
+    <div class="arcade-tools">
+      <button type="button" class="qj-icon arcade-mute" id="arcadeMute" aria-pressed="true" title="音效">🔊</button>
+      <button type="button" class="qj-icon" id="arcadeMenuClose" title="關閉（Esc）" aria-label="關閉小遊戲">✕</button>
     </div>
-  </div>
-</div>
-<div class="qj-modal" id="qjModal" role="dialog" aria-modal="true" aria-labelledby="qjHeading" hidden>
-  <div class="qj-panel">
-    <div class="qj-head">
-      <h2 id="qjHeading">🎮 沼王跳跳樂</h2>
-      <span class="qj-sub">休息區街機 · 往上跳！</span>
-      <button type="button" class="qj-icon" id="qjMute" aria-pressed="true" title="音效">🔊</button>
-      <button type="button" class="qj-icon" id="qjClose" title="關閉（Esc）" aria-label="關閉遊戲">✕</button>
-    </div>
-    <div class="qj-stage">
+    <div class="arcade-pane" id="qjPane" role="tabpanel" aria-labelledby="tab-jump">
+<div class="qj-stage">
       <canvas id="qjCanvas" width="360" height="640" tabindex="0" aria-label="沼王跳跳樂遊戲畫面：用左右方向鍵、A／D 鍵、拖曳畫面或下方按鈕控制角色左右移動"></canvas>
       <div class="qj-hud" hidden>
         <span>分數 <b id="qjScore">0</b></span>
@@ -150,7 +148,6 @@
         <div class="arc-board" id="qjBoardOver" aria-label="前五名"></div>
         <button type="button" class="qj-go" id="qjAgain">↻ 再玩一次</button>
         <button type="button" class="qj-alt" id="qjChange">換角色</button>
-        <button type="button" class="qj-alt" id="qjToMenu">回到選單</button>
         <p class="qj-keys">Space／Enter 立即重來</p>
       </div>
       <div class="qj-ov" id="qjPaused" hidden>
@@ -164,18 +161,9 @@
       <span class="qj-padtip">按住左右移動</span>
       <button type="button" class="qj-dir" id="qjRight" aria-label="向右">▶</button>
     </div>
-  </div>
-</div>
-
-<div class="qj-modal" id="ccModal" role="dialog" aria-modal="true" aria-labelledby="ccHeading" hidden>
-  <div class="qj-panel">
-    <div class="qj-head">
-      <h2 id="ccHeading">☕ 沼王接咖啡</h2>
-      <span class="qj-sub">休息區街機 · 接好物、躲警報！</span>
-      <button type="button" class="qj-icon" id="ccMute" aria-pressed="true" title="音效">🔊</button>
-      <button type="button" class="qj-icon" id="ccClose" title="關閉（Esc）" aria-label="關閉遊戲">✕</button>
     </div>
-    <div class="qj-stage">
+    <div class="arcade-pane" id="ccPane" role="tabpanel" aria-labelledby="tab-catch" hidden>
+<div class="qj-stage">
       <canvas id="ccCanvas" width="360" height="560" tabindex="0" aria-label="沼王接咖啡遊戲畫面：用左右方向鍵、A／D 鍵、拖曳或下方按鈕左右移動去接咖啡"></canvas>
       <div class="qj-hud" hidden>
         <span>分數 <b id="ccScore">0</b></span>
@@ -192,9 +180,10 @@
         <button type="button" class="qj-go" id="ccStart">▶ 開始（<span id="ccStartName">大沼王</span>）</button>
         <div class="arc-board" id="ccBoardTitle" aria-label="前五名"></div>
         <ul class="qj-legend">
-          <li>☕ 咖啡 +10　★ 星星 +30</li>
-          <li>連續接住會加乘，漏接好物只清 combo</li>
-          <li>🐛 蟲子 −1 命　<i class="lg c"></i>額度警報 −2 命（3 命）</li>
+          <li>☕ 咖啡 +10　★ 星星 +30　連續接住會加乘</li>
+          <li>教學 12 秒後，漏接 6 杯好物會扣 1 命</li>
+          <li>🐛 蟲子第 1 波就出現（−1 命）　<i class="lg c"></i>警報第 3 波出現（−2 命）</li>
+          <li>杯口會提前警示靠近的危險物；接住範圍比以前略緊</li>
         </ul>
         <p class="qj-keys">← → 或 A／D 移動 · 拖曳畫面 · Space／Enter 開始 · P 暫停 · Esc 關閉</p>
         <p class="qj-credit">玩法數值：量化分析師（OpenAI gpt-6.2-astra）設計 · 角色：大沼王-漫畫家 · 整合：澳洲企鵝</p>
@@ -208,7 +197,6 @@
         <div class="arc-board" id="ccBoardOver" aria-label="前五名"></div>
         <button type="button" class="qj-go" id="ccAgain">↻ 再玩一次</button>
         <button type="button" class="qj-alt" id="ccChange">換角色</button>
-        <button type="button" class="qj-alt" id="ccToMenu">回到選單</button>
         <p class="qj-keys">Space／Enter 立即重來</p>
       </div>
       <div class="qj-ov" id="ccPaused" hidden>
@@ -222,18 +210,9 @@
       <span class="qj-padtip">按住左右移動</span>
       <button type="button" class="qj-dir" id="ccRight" aria-label="向右">▶</button>
     </div>
-  </div>
-</div>
-
-<div class="qj-modal" id="hdModal" role="dialog" aria-modal="true" aria-labelledby="hdHeading" hidden>
-  <div class="qj-panel hd-panel">
-    <div class="qj-head">
-      <h2 id="hdHeading">🏃 走廊衝刺</h2>
-      <span class="qj-sub">休息區街機 · 跳過家具、蹲閃警報！</span>
-      <button type="button" class="qj-icon" id="hdMute" aria-pressed="true" title="音效">🔊</button>
-      <button type="button" class="qj-icon" id="hdClose" title="關閉（Esc）" aria-label="關閉遊戲">✕</button>
     </div>
-    <div class="qj-stage">
+    <div class="arcade-pane" id="hdPane" role="tabpanel" aria-labelledby="tab-dash" hidden>
+<div class="qj-stage">
       <canvas id="hdCanvas" width="640" height="360" tabindex="0" aria-label="走廊衝刺遊戲畫面：空白鍵或上鍵跳躍，下鍵或 S 下蹲，閃過走廊裡的家具與額度警報"></canvas>
       <div class="qj-hud" hidden>
         <span>分數 <b id="hdScore">0</b></span>
@@ -264,7 +243,6 @@
         <div class="arc-board" id="hdBoardOver" aria-label="前五名"></div>
         <button type="button" class="qj-go" id="hdAgain">↻ 再玩一次</button>
         <button type="button" class="qj-alt" id="hdChange">換角色</button>
-        <button type="button" class="qj-alt" id="hdToMenu">回到選單</button>
         <p class="qj-keys">Space／Enter 立即重來</p>
       </div>
       <div class="qj-ov" id="hdPaused" hidden>
@@ -277,6 +255,7 @@
       <button type="button" class="qj-dir" id="hdDuck" aria-label="下蹲">蹲</button>
       <span class="qj-padtip">按住蹲　點一下跳</span>
       <button type="button" class="qj-dir" id="hdJump" aria-label="跳躍">跳</button>
+    </div>
     </div>
   </div>
 </div>
