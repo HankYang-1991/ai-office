@@ -36,7 +36,7 @@
       </div>
       <div class="tgroup game" role="group" aria-label="小遊戲">
         <span class="tg-label">遊戲</span>
-        <button type="button" data-act="game" id="gameBtn" class="game-btn" aria-haspopup="dialog" aria-controls="qjModal" title="開啟小遊戲「沼王跳跳樂」（也可以點休息區的像素街機）">🎮 <span>沼王跳跳樂</span></button>
+        <button type="button" data-act="arcade" id="gameBtn" class="game-btn" aria-haspopup="dialog" aria-controls="arcadeModal" title="開啟休息區街機（沼王跳跳樂、沼王接咖啡、走廊衝刺）">🎮 <span>小遊戲</span></button>
       </div>
     </div>
     <div class="hstatus">
@@ -94,6 +94,23 @@
     </section>
   </aside>
 </main>
+
+<div class="qj-modal" id="arcadeModal" role="dialog" aria-modal="true" aria-labelledby="arcadeHeading" hidden>
+  <div class="qj-panel arcade-menu-panel">
+    <div class="qj-head">
+      <h2 id="arcadeHeading">🎮 休息區街機</h2>
+      <span class="qj-sub">三款小遊戲 · 排名只存在這台裝置</span>
+      <button type="button" class="qj-icon" id="arcadeMenuClose" title="關閉（Esc）" aria-label="關閉選單">✕</button>
+    </div>
+    <div class="arcade-menu">
+      <label class="arc-name menu-name">玩家名稱
+        <input id="arcadeName" maxlength="12" autocomplete="nickname" spellcheck="false" placeholder="匿名沼王">
+      </label>
+      <div class="arcade-cards" id="arcadeCards"></div>
+      <p class="qj-keys">點遊戲開始 · 前五名存在這台裝置、不會上傳 · Esc 關閉</p>
+    </div>
+  </div>
+</div>
 <div class="qj-modal" id="qjModal" role="dialog" aria-modal="true" aria-labelledby="qjHeading" hidden>
   <div class="qj-panel">
     <div class="qj-head">
@@ -113,8 +130,10 @@
       <div class="qj-ov" id="qjTitle">
         <div class="qj-logo">沼王<em>跳跳樂</em></div>
         <p class="qj-tip">選一位夥伴，一路往上跳！</p>
+        <label class="arc-name">名字 <input id="qjName" maxlength="12" autocomplete="nickname" spellcheck="false" placeholder="匿名沼王" aria-label="玩家名稱"></label>
         <div class="qj-chars" id="qjChars" role="radiogroup" aria-label="選擇角色"></div>
         <button type="button" class="qj-go" id="qjStart">▶ 開始（<span id="qjStartName">大沼王</span>）</button>
+        <div class="arc-board" id="qjBoardTitle" aria-label="前五名"></div>
         <ul class="qj-legend">
           <li><i class="lg n"></i>沼澤平台</li><li><i class="lg s"></i>彈簧超級跳</li><li><i class="lg m"></i>會移動</li><li><i class="lg f"></i>易碎，只能踩一次</li>
           <li>☕ +50 加速　★ +100</li><li><i class="lg c"></i>額度警報雲：從上面踩爆 +150，撞到就出局</li>
@@ -125,9 +144,13 @@
       <div class="qj-ov" id="qjOver" hidden>
         <div class="qj-logo sm">GAME OVER</div>
         <div class="qj-record" id="qjOvRecord" hidden>🏆 新紀錄！</div>
+        <div class="qj-rank" id="qjOvRank" hidden></div>
         <dl class="qj-res"><dt>分數</dt><dd id="qjOvScore">0</dd><dt>高度</dt><dd id="qjOvFloor">0F</dd><dt>最高分</dt><dd id="qjOvBest">0</dd></dl>
+        <label class="arc-name">名字 <input id="qjNameOver" maxlength="12" autocomplete="nickname" spellcheck="false" placeholder="匿名沼王" aria-label="玩家名稱"></label>
+        <div class="arc-board" id="qjBoardOver" aria-label="前五名"></div>
         <button type="button" class="qj-go" id="qjAgain">↻ 再玩一次</button>
         <button type="button" class="qj-alt" id="qjChange">換角色</button>
+        <button type="button" class="qj-alt" id="qjToMenu">回到選單</button>
         <p class="qj-keys">Space／Enter 立即重來</p>
       </div>
       <div class="qj-ov" id="qjPaused" hidden>
@@ -143,6 +166,120 @@
     </div>
   </div>
 </div>
+
+<div class="qj-modal" id="ccModal" role="dialog" aria-modal="true" aria-labelledby="ccHeading" hidden>
+  <div class="qj-panel">
+    <div class="qj-head">
+      <h2 id="ccHeading">☕ 沼王接咖啡</h2>
+      <span class="qj-sub">休息區街機 · 接好物、躲警報！</span>
+      <button type="button" class="qj-icon" id="ccMute" aria-pressed="true" title="音效">🔊</button>
+      <button type="button" class="qj-icon" id="ccClose" title="關閉（Esc）" aria-label="關閉遊戲">✕</button>
+    </div>
+    <div class="qj-stage">
+      <canvas id="ccCanvas" width="360" height="560" tabindex="0" aria-label="沼王接咖啡遊戲畫面：用左右方向鍵、A／D 鍵、拖曳或下方按鈕左右移動去接咖啡"></canvas>
+      <div class="qj-hud" hidden>
+        <span>分數 <b id="ccScore">0</b></span>
+        <span>波次 <b id="ccWave">1</b></span>
+        <span class="qj-boost" id="ccCombo" hidden>COMBO</span>
+        <span id="ccLives" aria-label="剩餘生命">♥♥♥</span>
+        <span>最高 <b id="ccBest">0</b></span>
+      </div>
+      <div class="qj-ov" id="ccTitle">
+        <div class="qj-logo">沼王<em>接咖啡</em></div>
+        <p class="qj-tip">接住咖啡與星星，躲開蟲與紅色額度警報！</p>
+        <label class="arc-name">名字 <input id="ccName" maxlength="12" autocomplete="nickname" spellcheck="false" placeholder="匿名沼王" aria-label="玩家名稱"></label>
+        <div class="qj-chars" id="ccChars" role="radiogroup" aria-label="選擇角色"></div>
+        <button type="button" class="qj-go" id="ccStart">▶ 開始（<span id="ccStartName">大沼王</span>）</button>
+        <div class="arc-board" id="ccBoardTitle" aria-label="前五名"></div>
+        <ul class="qj-legend">
+          <li>☕ 咖啡 +10　★ 星星 +30</li>
+          <li>連續接住會加乘，漏接好物只清 combo</li>
+          <li>🐛 蟲子 −1 命　<i class="lg c"></i>額度警報 −2 命（3 命）</li>
+        </ul>
+        <p class="qj-keys">← → 或 A／D 移動 · 拖曳畫面 · Space／Enter 開始 · P 暫停 · Esc 關閉</p>
+        <p class="qj-credit">玩法數值：量化分析師（OpenAI gpt-6.2-astra）設計 · 角色：大沼王-漫畫家 · 整合：澳洲企鵝</p>
+      </div>
+      <div class="qj-ov" id="ccOver" hidden>
+        <div class="qj-logo sm">GAME OVER</div>
+        <div class="qj-record" id="ccOvRecord" hidden>🏆 新紀錄！</div>
+        <div class="qj-rank" id="ccOvRank" hidden></div>
+        <dl class="qj-res"><dt>分數</dt><dd id="ccOvScore">0</dd><dt>波次</dt><dd id="ccOvWave">1</dd><dt>最高分</dt><dd id="ccOvBest">0</dd></dl>
+        <label class="arc-name">名字 <input id="ccNameOver" maxlength="12" autocomplete="nickname" spellcheck="false" placeholder="匿名沼王" aria-label="玩家名稱"></label>
+        <div class="arc-board" id="ccBoardOver" aria-label="前五名"></div>
+        <button type="button" class="qj-go" id="ccAgain">↻ 再玩一次</button>
+        <button type="button" class="qj-alt" id="ccChange">換角色</button>
+        <button type="button" class="qj-alt" id="ccToMenu">回到選單</button>
+        <p class="qj-keys">Space／Enter 立即重來</p>
+      </div>
+      <div class="qj-ov" id="ccPaused" hidden>
+        <div class="qj-logo sm">暫停中</div>
+        <button type="button" class="qj-go" id="ccResume">▶ 繼續</button>
+        <button type="button" class="qj-alt" id="ccRestart">↻ 重新開始</button>
+      </div>
+    </div>
+    <div class="qj-pad" aria-label="觸控按鈕">
+      <button type="button" class="qj-dir" id="ccLeft" aria-label="向左">◀</button>
+      <span class="qj-padtip">按住左右移動</span>
+      <button type="button" class="qj-dir" id="ccRight" aria-label="向右">▶</button>
+    </div>
+  </div>
+</div>
+
+<div class="qj-modal" id="hdModal" role="dialog" aria-modal="true" aria-labelledby="hdHeading" hidden>
+  <div class="qj-panel hd-panel">
+    <div class="qj-head">
+      <h2 id="hdHeading">🏃 走廊衝刺</h2>
+      <span class="qj-sub">休息區街機 · 跳過家具、蹲閃警報！</span>
+      <button type="button" class="qj-icon" id="hdMute" aria-pressed="true" title="音效">🔊</button>
+      <button type="button" class="qj-icon" id="hdClose" title="關閉（Esc）" aria-label="關閉遊戲">✕</button>
+    </div>
+    <div class="qj-stage">
+      <canvas id="hdCanvas" width="640" height="360" tabindex="0" aria-label="走廊衝刺遊戲畫面：空白鍵或上鍵跳躍，下鍵或 S 下蹲，閃過走廊裡的家具與額度警報"></canvas>
+      <div class="qj-hud" hidden>
+        <span>分數 <b id="hdScore">0</b></span>
+        <span>樓層 <b id="hdFloor">F01</b></span>
+        <span>最高 <b id="hdBest">0</b></span>
+      </div>
+      <div class="qj-ov" id="hdTitle">
+        <div class="qj-logo">走廊<em>衝刺</em></div>
+        <p class="qj-tip">翻過矮櫃、低頭閃過額度警報，順路撿杯咖啡！</p>
+        <label class="arc-name">名字 <input id="hdName" maxlength="12" autocomplete="nickname" spellcheck="false" placeholder="匿名沼王" aria-label="玩家名稱"></label>
+        <div class="qj-chars" id="hdChars" role="radiogroup" aria-label="選擇角色"></div>
+        <button type="button" class="qj-go" id="hdStart">▶ 開始（<span id="hdStartName">大沼王</span>）</button>
+        <div class="arc-board" id="hdBoardTitle" aria-label="前五名"></div>
+        <ul class="qj-legend">
+          <li>跳過矮櫃／紙箱　蹲低閃過懸掛警報雲</li>
+          <li>☕ 咖啡 +10　★ 星星 +30（跳起來才夠得到）</li>
+          <li>分數也含跑步距離，每 1000 像素升一層樓</li>
+        </ul>
+        <p class="qj-keys">空白／↑／W 跳 · ↓／S 蹲 · Space／Enter 開始 · P 暫停 · Esc 關閉</p>
+        <p class="qj-credit">玩法數值：量化分析師（OpenAI gpt-6.2-astra）設計 · 角色：大沼王-漫畫家 · 整合：澳洲企鵝</p>
+      </div>
+      <div class="qj-ov" id="hdOver" hidden>
+        <div class="qj-logo sm">GAME OVER</div>
+        <div class="qj-record" id="hdOvRecord" hidden>🏆 新紀錄！</div>
+        <div class="qj-rank" id="hdOvRank" hidden></div>
+        <dl class="qj-res"><dt>分數</dt><dd id="hdOvScore">0</dd><dt>樓層</dt><dd id="hdOvFloor">F01</dd><dt>最高分</dt><dd id="hdOvBest">0</dd></dl>
+        <label class="arc-name">名字 <input id="hdNameOver" maxlength="12" autocomplete="nickname" spellcheck="false" placeholder="匿名沼王" aria-label="玩家名稱"></label>
+        <div class="arc-board" id="hdBoardOver" aria-label="前五名"></div>
+        <button type="button" class="qj-go" id="hdAgain">↻ 再玩一次</button>
+        <button type="button" class="qj-alt" id="hdChange">換角色</button>
+        <button type="button" class="qj-alt" id="hdToMenu">回到選單</button>
+        <p class="qj-keys">Space／Enter 立即重來</p>
+      </div>
+      <div class="qj-ov" id="hdPaused" hidden>
+        <div class="qj-logo sm">暫停中</div>
+        <button type="button" class="qj-go" id="hdResume">▶ 繼續</button>
+        <button type="button" class="qj-alt" id="hdRestart">↻ 重新開始</button>
+      </div>
+    </div>
+    <div class="qj-pad hd-pad" aria-label="觸控按鈕">
+      <button type="button" class="qj-dir" id="hdDuck" aria-label="下蹲">蹲</button>
+      <span class="qj-padtip">按住蹲　點一下跳</span>
+      <button type="button" class="qj-dir" id="hdJump" aria-label="跳躍">跳</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <footer>AI 辦公室 v2 · 唯讀監控：額度約每 2 小時由 Grok Bot 用量報告同步（<a href="data/usage.json">usage.json</a>），Codex 額度由小沼王自己回報 · Claude / Gemini 訂閱用量見 <a href="data/subscriptions.json">subscriptions.json</a>，Gemini API 免費額度見 <a href="data/gemini.json">gemini.json</a>，OpenAI API 花費見 <a href="data/openai.json">openai.json</a>，時間軸快照見 <a href="data/history.json">history.json</a> · 群聊為<b>真實對話紀錄</b>（<a href="data/chat.json">chat.json</a>）· 時間皆為台北時間<span id="artCredit" hidden></span><span id="bgmCredit" hidden></span></footer>
 
@@ -153,7 +290,11 @@
 <script src="js/codex-state.js"></script>
 <script src="js/pools.js"></script>
 <script src="js/director.js"></script>
+<script src="js/arcade-leaderboard.js"></script>
+<script src="js/arcade.js"></script>
 <script src="js/quagsire-jump.js"></script>
+<script src="js/coffee-catch.js"></script>
+<script src="js/hallway-dash.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

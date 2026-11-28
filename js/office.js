@@ -665,10 +665,11 @@
     canvas = el; dctx = canvas.getContext('2d');
     new ResizeObserver(resize).observe(canvas); resize();
     canvas.addEventListener('pointerup', e => {
-      const a = hitTest(e.clientX, e.clientY, e.pointerType !== 'mouse');
-      if (a) { select(a.id, 'map'); return; }
-      const f = arcadeAt(e.clientX, e.clientY, e.pointerType !== 'mouse');
-      if (f) arcadeHooks.forEach(fn => fn(f));
+      const touch = e.pointerType !== 'mouse';
+      const f = arcadeAt(e.clientX, e.clientY, touch);
+      if (f) { arcadeHooks.forEach(fn => fn(f)); return; }   // 街機優先，避免角色站在旁邊時點不到
+      const a = hitTest(e.clientX, e.clientY, touch);
+      if (a) select(a.id, 'map');
     });
     canvas.addEventListener('pointermove', e => {
       if (e.pointerType !== 'mouse') return;

@@ -1,5 +1,5 @@
 /* 沼王跳跳樂（Quagsire Jump）：Doodle Jump 風格的向上跳台小遊戲。
- * 純前端 Canvas + Web Audio：不呼叫任何 API、不讀寫任何金鑰；只用 localStorage 存最高分、角色與靜音設定。
+ * 純前端 Canvas + Web Audio：不呼叫任何 API、不讀寫任何金鑰；只用 localStorage 存角色、靜音，以及與其他小遊戲共用的名字與前五名排行榜。
  * 物理數值、平台間距曲線、平台機率、道具與「紅色額度警報雲」的規則由量化分析師（OpenAI gpt-6.2-astra）設計，
  * 澳洲企鵝整合、調手感並接進 AI 辦公室。邏輯解析度 180×320，依畫布實際像素整數取整繪製，保持像素銳利。
  */
@@ -34,7 +34,10 @@
   let mode = 'title';             // title | play | dying | over | paused
   let g = null;
   let charIdx = clamp(parseInt(store.get(KEY_CHAR, '0'), 10) || 0, 0, CHARS.length - 1);
-  let best = Math.max(0, parseInt(store.get(KEY_BEST, '0'), 10) || 0);
+  const boardBest = () => (window.ArcadeBoard ? ArcadeBoard.bestScore('jump') : Math.max(0, parseInt(store.get(KEY_BEST, '0'), 10) || 0));
+  let best = boardBest();
+  let lastEntryId = null;
+  let fromMenu = false;
   let muted = store.get(KEY_MUTE, '0') === '1';
   const keys = { left: false, right: false };
   const touch = { left: false, right: false };
@@ -284,11 +287,22 @@
     mode = 'dying'; g.vy = -260; g.vx = 0; g.dieT = 0; Sfx.hurt();
     pop(g.x, g.y - 34, '額度警報！', '#ff9d9d');
   }
+  function paintBoards() {
+    const B = window.ArcadeBoard; if (!B) return;
+    const extra = e => (e.floor || 0) + 'F';
+    B.render(ui.boardTitle, 'jump', { extra });
+    B.render(ui.boardOver, 'jump', { extra, highlightId: lastEntryId });
+  }
   function gameOver() {
     if (g.demo) { newGame(true); return; }
     mode = 'over';
-    g.newRecord = g.score > best;
-    if (g.newRecord) { best = g.score; store.set(KEY_BEST, best); }
+    const B = window.ArcadeBoard;
+    const result = B ? B.submit('jump', { score: g.score, floor: g.floor, character: CHARS[charIdx].name }) : null;
+    g.rank = result ? result.rank : 0;
+    g.newRecord = result ? result.newRecord : g.score > best;
+    lastEntryId = result && result.entered ? result.entry.id : null;
+    if (g.newRecord && !B) store.set(KEY_BEST, g.score);
+    best = boardBest();
     Sfx.over(); if (g.newRecord) Sfx.record();
     showOverlay('over');
   }
@@ -466,7 +480,12 @@
       ui.ovFloor.textContent = g.floor + 'F';
       ui.ovBest.textContent = best.toLocaleString('en-US');
       ui.ovRecord.hidden = !g.newRecord;
+      if (ui.ovRank) {
+        ui.ovRank.hidden = !g.rank;
+        ui.ovRank.textContent = g.rank ? `🎉 進入前五名 · 第 ${g.rank} 名` : '';
+      }
     }
+    if (which === 'title' || which === 'over') paintBoards();
     if (which === 'title') renderChars();
     const target = { title: ui.startBtn, over: ui.again, paused: ui.resumeBtn }[which];
     if (target && open && !document.hidden) target.focus({ preventScroll: true });
@@ -516,8 +535,11 @@
   function openGame(from) {
     if (!modal) return;
     if (open) return;
-    opener = from || document.activeElement;
+    const opts = from && typeof from === 'object' && (from.fromMenu || from.opener || from.silent != null) ? from : { opener: from };
+    fromMenu = !!opts.fromMenu;
+    opener = opts.opener || document.activeElement;
     open = true; modal.hidden = false; document.body.classList.add('qj-open');
+    lastEntryId = null; best = boardBest();
     loadSheets();
     if (window.Office) window.Office.setActive(false);   // 遊戲開著時辦公室地圖暫停，省電
     if (!ro) { ro = new ResizeObserver(resize); }
@@ -527,15 +549,21 @@
     else { showOverlay(mode === 'over' ? 'over' : 'paused'); render(); }
     startLoop();
   }
-  function closeGame() {
+  function closeGame(opts) {
     if (!open) return;
     if (mode === 'play' || mode === 'dying') { if (mode === 'dying') gameOver(); else mode = 'paused'; }
-    open = false; modal.hidden = true; document.body.classList.remove('qj-open');
+    const silent = opts && opts.silent;
+    const back = fromMenu && window.Arcade && !silent;
+    open = false; modal.hidden = true;
     stopLoop(); clearInput();
     if (ro) ro.disconnect();
-    if (window.Office) window.Office.setActive(!document.hidden);
-    if (opener && opener.focus && document.contains(opener)) opener.focus({ preventScroll: true });
-    opener = null;
+    if (back) { if (window.Arcade) window.Arcade.gameClosed(); }
+    else {
+      document.body.classList.remove('qj-open');
+      if (window.Office) window.Office.setActive(!document.hidden && !(window.Arcade && window.Arcade.isBusy()));
+      if (opener && opener.focus && document.contains(opener)) opener.focus({ preventScroll: true });
+    }
+    fromMenu = false; opener = null;
   }
 
   // ---------- 輸入 ----------
@@ -543,16 +571,21 @@
   const isRight = e => e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D';
   function onKeyDown(e) {
     if (!open || e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target && e.target.closest && e.target.closest('input, textarea')) {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) e.target.blur(); }
+      return;
+    }
     if (e.key === 'Tab') { trapFocus(e); return; }
     if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); if (!e.repeat) closeGame(); return; }
     if (e.key === ' ' || e.key === 'Enter') {
       if (e.repeat) { e.preventDefault(); return; }                       // 長按不會連開好幾局
-      if (e.target && e.target.closest && e.target.closest('button')) return;   // 焦點在按鈕上：交給按鈕原生 click
+      if (e.target && e.target.closest && e.target.closest('button, input')) return;   // 焦點在按鈕或名字欄：交給原生行為
       e.preventDefault();
       if (mode === 'title' || mode === 'over') startGame(); else if (mode === 'paused') resume();
       return;
     }
     if (e.key === 'p' || e.key === 'P') { e.preventDefault(); if (!e.repeat) { if (mode === 'play') pause(); else if (mode === 'paused') resume(); } return; }
+    if (mode !== 'play') return;
     if (isLeft(e)) keys.left = true; else if (isRight(e)) keys.right = true;
     else if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
     e.preventDefault();
@@ -562,7 +595,7 @@
     if (isRight(e)) keys.right = false;
   }
   function trapFocus(e) {
-    const f = [...modal.querySelectorAll('button:not(:disabled), [tabindex="0"]')].filter(el => !el.closest('[hidden]') && el.getClientRects().length);
+    const f = [...modal.querySelectorAll('button:not(:disabled), input:not([disabled]), [tabindex="0"]')].filter(el => !el.closest('[hidden]') && el.getClientRects().length);
     if (!f.length) { e.preventDefault(); return; }
     const i = f.indexOf(document.activeElement);
     if (i < 0 || (e.shiftKey ? i === 0 : i === f.length - 1)) { e.preventDefault(); f[e.shiftKey ? f.length - 1 : 0].focus({ preventScroll: true }); }
@@ -590,12 +623,18 @@
     ui = {
       ov: { title: $('#qjTitle'), over: $('#qjOver'), paused: $('#qjPaused') },
       chars: $('#qjChars'), startBtn: $('#qjStart'), startName: $('#qjStartName'),
-      ovScore: $('#qjOvScore'), ovFloor: $('#qjOvFloor'), ovBest: $('#qjOvBest'), ovRecord: $('#qjOvRecord'),
+      ovScore: $('#qjOvScore'), ovFloor: $('#qjOvFloor'), ovBest: $('#qjOvBest'), ovRecord: $('#qjOvRecord'), ovRank: $('#qjOvRank'),
+      boardTitle: $('#qjBoardTitle'), boardOver: $('#qjBoardOver'),
       again: $('#qjAgain'), resumeBtn: $('#qjResume'), mute: $('#qjMute'), btnL: $('#qjLeft'), btnR: $('#qjRight'),
     };
+    if (window.ArcadeBoard) {
+      ArcadeBoard.bindNameInput($('#qjName')); ArcadeBoard.bindNameInput($('#qjNameOver'));
+      ArcadeBoard.onName(n => { if (open && mode === 'over' && lastEntryId) ArcadeBoard.rename('jump', lastEntryId, n); if (open) paintBoards(); });
+    }
     ui.startBtn.addEventListener('click', startGame);
     ui.again.addEventListener('click', startGame);
     $('#qjChange').addEventListener('click', toTitle);
+    const toMenu = $('#qjToMenu'); if (toMenu) toMenu.addEventListener('click', () => closeGame());
     ui.resumeBtn.addEventListener('click', resume);
     $('#qjRestart').addEventListener('click', startGame);
     $('#qjClose').addEventListener('click', closeGame);
@@ -621,11 +660,13 @@
       if (document.hidden) { clearInput(); pause(); stopLoop(); } else { resize(); startLoop(); }
     });
     hud.best.textContent = best.toLocaleString('en-US');
+    if (window.Arcade) window.Arcade.register({ id: 'jump', title: '沼王跳跳樂', emoji: '🐸', blurb: '往上跳台，挑戰你的最高樓層！', open: openGame, close: closeGame, isOpen: () => open });
   }
 
   window.QuagsireJump = {
     open: openGame, close: closeGame, isOpen: () => open,
-    __forceFall: () => { if (g && mode === 'play') { g.plats.forEach(p => { p.broken = true; }); } },   // 測試用：讓角色掉下去
+    __forceFall: () => { if (g && mode === 'play') { g.plats.forEach(p => { p.broken = true; }); } },
+    __forceOver: (score) => { if (g && mode === 'play') { if (score != null) { g.score = score; g.height = Math.max(g.height, score); } gameOver(); } },
     debug: () => g && { mode, x: +g.x.toFixed(1), y: +g.y.toFixed(1), vx: +g.vx.toFixed(1), vy: +g.vy.toFixed(1), score: g.score, floor: g.floor, height: Math.floor(g.height), plats: g.plats.length, running: !!rafId, best, char: CHARS[charIdx].name, k: +k.toFixed(2),
       next: (() => { const up = g.plats.filter(p => !p.broken && p.y < g.y - 8 && p.y > g.y - 70).sort((a, b) => b.y - a.y)[0]; return up ? +up.x.toFixed(1) : null; })(),
       maxDx: (() => { let m = 0; for (let i = 2; i < g.plats.length; i++) m = Math.max(m, Math.abs((g.plats[i].home ?? g.plats[i].x) - (g.plats[i - 1].home ?? g.plats[i - 1].x)) + (g.plats[i].range || 0)); return +m.toFixed(1); })() },

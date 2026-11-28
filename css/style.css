@@ -354,3 +354,45 @@ body.qj-open{overflow:hidden}
 }
 .qj-modal{padding:max(6px,env(safe-area-inset-top)) max(6px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));overscroll-behavior:contain}
 .qj-dir,#qjCanvas{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+
+/* ---------- 街機選單、共用排行榜、另外兩款小遊戲畫布 ---------- */
+.arcade-menu-panel{min-width:min(420px,100%);max-width:520px;width:min(520px,calc(100vw - 24px))}
+.arcade-menu{padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px;line-height:1.4}
+.arcade-cards{display:flex;flex-direction:column;gap:8px}
+.arcade-card{display:flex;align-items:center;gap:10px;text-align:left;background:var(--panel2);border:2px solid var(--line);border-radius:8px;padding:10px 12px;box-shadow:0 2px 0 #070912}
+.arcade-card:hover{border-color:#b59cff;background:#211a3a}
+.arcade-card:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.ac-emoji{font-size:28px;width:1.6em;text-align:center;flex-shrink:0}
+.ac-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.ac-body b{font-size:15px;color:#fff}
+.ac-body small{font-size:12px;color:#c9d0e6}
+.ac-best{font-size:11px;font-family:var(--mono);color:var(--gold)}
+.ac-go{background:#2c8f4a;border:2px solid #0b0e19;outline:1px solid #7fe08c;border-radius:5px;padding:6px 12px;font-weight:800;color:#fff;flex-shrink:0}
+.arc-name{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;color:#c9d0e6;margin:0}
+.arc-name.menu-name{justify-content:flex-start;background:#0b0e19;border:2px solid #2f3760;border-radius:6px;padding:8px 10px}
+.arc-name input{width:11.5em;max-width:46vw;background:#161a2b;border:2px solid var(--line);border-radius:4px;padding:4px 8px;color:#fff;font:inherit;font-family:var(--mono)}
+.arc-name input:focus{border-color:var(--gold);outline:none}
+.arc-board{width:100%;max-width:330px;margin:0 auto;text-align:left}
+.arc-empty{margin:0;padding:6px 8px;font-size:11px;color:#aab3cf;text-align:center}
+.arc-list{list-style:none;margin:0;padding:4px 0;display:flex;flex-direction:column;gap:2px;background:#0b0e19aa;border:2px solid #2f3760;border-radius:6px}
+.arc-row{display:grid;grid-template-columns:1.4em 1fr 3.4em 2.2em 4.2em 2.6em;gap:2px 4px;align-items:center;padding:3px 8px;font-size:10.5px;font-family:var(--mono);color:#dfe6ff}
+.arc-rk{color:var(--gold)}
+.arc-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font);font-weight:700;color:#fff}
+.arc-sc{text-align:right;font-weight:700}
+.arc-ex,.arc-dt{color:#aab3cf;text-align:right}
+.arc-who{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8d96b3;font-family:var(--font);font-size:10px}
+.arc-row.on{background:#2a2410;box-shadow:inset 0 0 0 1px var(--gold)}
+.qj-rank{font-weight:800;color:#ffe08a;font-size:13px}
+#ccCanvas{height:min(560px,calc(100vh - 150px));height:min(560px,calc(100dvh - 150px));aspect-ratio:9/14;width:auto;max-width:calc(100vw - 30px);image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;outline:none;display:block}
+#hdCanvas{height:min(360px,calc(100vh - 200px));height:min(360px,calc(100dvh - 200px));aspect-ratio:16/9;width:auto;max-width:calc(100vw - 30px);image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;outline:none;display:block}
+.hd-panel{max-width:min(720px,100%)}
+@media (pointer:coarse),(max-width:860px){
+  #ccCanvas{height:min(560px,calc(100vh - 220px));height:min(560px,calc(100dvh - 220px))}
+  #hdCanvas{height:min(280px,calc(100vh - 250px));height:min(280px,calc(100dvh - 250px))}
+  .arcade-menu-panel{width:100%}
+  .arc-row{grid-template-columns:1.2em 1fr 3.2em 2em;font-size:10px}
+  .arc-who,.arc-dt{display:none}
+}
+@media (max-width:860px){
+  .arcade-menu{padding:10px}
+}
